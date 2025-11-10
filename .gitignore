@@ -1,0 +1,9 @@
+node_modules
+dist
+.env
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnp.cjs
+.pnp.loader.mjs
+.DS_Store

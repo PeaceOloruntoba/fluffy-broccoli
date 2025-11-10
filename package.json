@@ -1,0 +1,51 @@
+{
+  "name": "fluffy-broccoli",
+  "version": "1.0.0",
+  "description": "MySchoolBus backend (Node + Express + TS + PostgreSQL)",
+  "homepage": "https://github.com/PeaceOloruntoba/fluffy-broccoli#readme",
+  "bugs": {
+    "url": "https://github.com/PeaceOloruntoba/fluffy-broccoli/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/PeaceOloruntoba/fluffy-broccoli.git"
+  },
+  "license": "ISC",
+  "author": "",
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "dev": "nodemon --watch src --ext ts,tsx --exec \"tsx src/index.ts\"",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js",
+    "lint:types": "tsc --noEmit",
+    "test": "echo \"No tests yet\" && exit 0"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "compression": "^1.7.4",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "express-rate-limit": "^7.4.0",
+    "helmet": "^7.1.0",
+    "hpp": "^0.2.3",
+    "pg": "^8.13.0",
+    "pino": "^9.5.0",
+    "pino-http": "^10.3.0",
+    "pino-pretty": "^11.2.2",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/compression": "^1.8.1",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^4.17.25",
+    "@types/hpp": "^0.2.7",
+    "@types/node": "^22.19.0",
+    "nodemon": "^3.1.10",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3"
+  }
+}
