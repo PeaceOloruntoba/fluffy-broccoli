@@ -26,7 +26,7 @@ if (env.NODE_ENV !== 'test') {
   app.use(pinoHttp({ logger }));
 }
 
-app.use('/api', router);
+app.use('/api/v1', router);
 
 app.use(notFoundHandler);
 app.use(errorHandler);

@@ -12,7 +12,8 @@ const schema = z.object({
   RATE_LIMIT_WINDOW_MINUTES: z.coerce.number().default(15),
   RATE_LIMIT_MAX: z.coerce.number().default(100),
   CORS_ORIGIN: z.string().default('*'),
-  CORS_ORIGINS: z.string().optional()
+  CORS_ORIGINS: z.string().optional(),
+  OTP_TTL_MINUTES: z.coerce.number().default(10)
 });
 
 export const env = schema.parse(process.env);
