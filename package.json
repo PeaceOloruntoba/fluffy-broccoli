@@ -20,12 +20,14 @@
     "start": "node dist/index.js",
     "lint:types": "tsc --noEmit",
     "test": "echo \"No tests yet\" && exit 0",
-    "migrate": "tsx src/scripts/migrate.ts"
+    "migrate": "tsx src/scripts/migrate.ts",
+    "seed:superadmin": "tsx src/scripts/seed_superadmin.ts"
   },
   "engines": {
     "node": ">=18"
   },
   "dependencies": {
+    "date-fns": "^4.1.0",
     "bcryptjs": "^2.4.3",
     "compression": "^1.7.4",
     "cors": "^2.8.5",
@@ -34,6 +36,8 @@
     "express-rate-limit": "^7.4.0",
     "helmet": "^7.1.0",
     "hpp": "^0.2.3",
+    "jsonwebtoken": "^9.0.2",
+    "nodemailer": "^6.9.14",
     "pg": "^8.13.0",
     "pino": "^9.5.0",
     "pino-http": "^10.3.0",
@@ -41,6 +45,7 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@types/jsonwebtoken": "^9.0.6",
     "@types/bcryptjs": "^2.4.6",
     "@types/compression": "^1.8.1",
     "@types/cors": "^2.8.19",
