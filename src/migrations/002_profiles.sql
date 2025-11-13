@@ -1,0 +1,40 @@
+-- Enums for profiles
+DO $$ BEGIN
+  CREATE TYPE parent_relationship AS ENUM ('Father','Mother','Aunty','Uncle');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE TYPE gender AS ENUM ('male','female');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+-- Extend parents
+ALTER TABLE parents
+  ADD COLUMN IF NOT EXISTS fullname TEXT,
+  ADD COLUMN IF NOT EXISTS phone_number TEXT,
+  ADD COLUMN IF NOT EXISTS nin TEXT,
+  ADD COLUMN IF NOT EXISTS relationship parent_relationship,
+  ADD COLUMN IF NOT EXISTS address TEXT,
+  ADD COLUMN IF NOT EXISTS latitude DOUBLE PRECISION,
+  ADD COLUMN IF NOT EXISTS longitude DOUBLE PRECISION;
+
+-- Extend teachers
+ALTER TABLE teachers
+  ADD COLUMN IF NOT EXISTS name TEXT,
+  ADD COLUMN IF NOT EXISTS nin TEXT,
+  ADD COLUMN IF NOT EXISTS gender gender,
+  ADD COLUMN IF NOT EXISTS dob DATE,
+  ADD COLUMN IF NOT EXISTS nationality TEXT,
+  ADD COLUMN IF NOT EXISTS state_of_origin TEXT,
+  ADD COLUMN IF NOT EXISTS phone TEXT,
+  ADD COLUMN IF NOT EXISTS passport_photo_url TEXT;
+
+-- Extend schools
+ALTER TABLE schools
+  ADD COLUMN IF NOT EXISTS phone TEXT,
+  ADD COLUMN IF NOT EXISTS state TEXT,
+  ADD COLUMN IF NOT EXISTS city TEXT,
+  ADD COLUMN IF NOT EXISTS country TEXT,
+  ADD COLUMN IF NOT EXISTS address TEXT,
+  ADD COLUMN IF NOT EXISTS latitude DOUBLE PRECISION,
+  ADD COLUMN IF NOT EXISTS longitude DOUBLE PRECISION,
+  ADD COLUMN IF NOT EXISTS logo_url TEXT;
