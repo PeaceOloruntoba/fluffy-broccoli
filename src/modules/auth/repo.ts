@@ -97,6 +97,10 @@ export async function reserveUniqueCodeTx(client: PoolClient, code: string): Pro
   return !!rows[0];
 }
 
+export async function deleteOtpsForEmailPurpose(email: string, purpose: 'email_verify' | 'password_reset'): Promise<void> {
+  await db.query(`DELETE FROM otps WHERE email = $1 AND purpose = $2 AND consumed_at IS NULL`, [email, purpose]);
+}
+
 export async function isProfileVerified(userId: string, role: 'admin'|'parent'|'teacher'|'driver'): Promise<boolean> {
   let sql = '';
   switch (role) {

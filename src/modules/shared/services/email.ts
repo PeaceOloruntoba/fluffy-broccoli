@@ -13,8 +13,12 @@ function getTransporter() {
   transporter = nodemailer.createTransport({
     host: env.SMTP_HOST,
     port: env.SMTP_PORT,
-    secure: !!env.SMTP_SECURE,
-    auth: { user: env.SMTP_USER, pass: env.SMTP_PASS }
+    secure: !!env.SMTP_SECURE, // false for 587/2525 (STARTTLS)
+    requireTLS: !!env.SMTP_REQUIRE_TLS,
+    auth: { user: env.SMTP_USER, pass: env.SMTP_PASS },
+    tls: {
+      minVersion: 'TLSv1.2'
+    }
   });
   return transporter;
 }

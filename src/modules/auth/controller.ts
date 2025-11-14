@@ -7,6 +7,7 @@ const loginSchema = z.object({ identifier: z.string().min(1), password: z.string
 const forgotSchema = z.object({ email: z.string().email() });
 const resetSchema = z.object({ email: z.string().email(), code: z.string().length(6), newPassword: z.string().min(6) });
 const verifyEmailSchema = z.object({ email: z.string().email(), code: z.string().length(6) });
+const resendEmailSchema = z.object({ email: z.string().email() });
 
 const signupSchoolSchema = z.object({
   name: z.string().min(1),
@@ -84,6 +85,17 @@ export async function verifyEmail(req: Request, res: Response) {
     return sendSuccess(res, null, 'email_verified');
   } catch (e) {
     return sendError(res, e instanceof Error ? e.message : 'verification_failed', 400);
+  }
+}
+
+export async function resendEmailVerification(req: Request, res: Response) {
+  const parsed = resendEmailSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ success: false, message: 'validation_error', errors: parsed.error.flatten() });
+  try {
+    await service.resendEmailVerification(parsed.data.email);
+    return sendSuccess(res, null, 'otp_resent');
+  } catch (e) {
+    return sendError(res, e instanceof Error ? e.message : 'resend_failed', 400);
   }
 }
 

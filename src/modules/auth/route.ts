@@ -8,6 +8,7 @@ router.post('/login', ctrl.login);
 router.post('/forgot-password', ctrl.forgotPassword);
 router.post('/reset-password', ctrl.resetPassword);
 router.post('/verify-email', ctrl.verifyEmail);
+router.post('/resend-email-verification', ctrl.resendEmailVerification);
 
 // Signup endpoints
 router.post('/signup/school', upload.single('logo'), ctrl.signupSchool);

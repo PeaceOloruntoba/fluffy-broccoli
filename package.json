@@ -54,6 +54,7 @@
     "@types/hpp": "^0.2.7",
     "@types/jsonwebtoken": "^9.0.6",
     "@types/node": "^22.19.0",
+    "@types/nodemailer": "^6.4.21",
     "@types/pg": "^8.15.6",
     "nodemon": "^3.1.10",
     "tsx": "^4.20.6",

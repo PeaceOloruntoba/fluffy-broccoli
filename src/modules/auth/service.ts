@@ -5,7 +5,7 @@ import { hashPassword, verifyPassword } from '../shared/utils/password.js';
 import { signAccessToken } from '../shared/utils/jwt.js';
 import { sendEmail } from '../shared/services/email.js';
 import type { LoginRequest, LoginResponse } from './type.js';
-import { consumeOtp, createUserTx, findUserByEmailOrUsername, findValidOtp, getSchoolById, getUserByEmail, insertOtp, insertParentTx, insertSchoolTx, insertTeacherTx, isProfileVerified, reserveUniqueCodeTx, setUserEmailVerifiedByEmail, updateLastLogin, updateUserPassword } from './repo.js';
+import { consumeOtp, createUserTx, deleteOtpsForEmailPurpose, findUserByEmailOrUsername, findValidOtp, getSchoolById, getUserByEmail, insertOtp, insertParentTx, insertSchoolTx, insertTeacherTx, isProfileVerified, reserveUniqueCodeTx, setUserEmailVerifiedByEmail, updateLastLogin, updateUserPassword } from './repo.js';
 import { db } from '../shared/config/db.js';
 import type { SignupParentRequest, SignupSchoolRequest, SignupTeacherRequest } from './type.js';
 import { uploadBuffer } from '../shared/services/cloudinary.js';
@@ -60,6 +60,16 @@ export async function verifyEmail(email: string, code: string): Promise<void> {
   await setUserEmailVerifiedByEmail(email);
 }
 
+export async function resendEmailVerification(email: string): Promise<void> {
+  const user = await getUserByEmail(email);
+  if (!user) return; // do not leak
+  await deleteOtpsForEmailPurpose(email, 'email_verify');
+  const code = generateSixDigitOtp();
+  const expires = addMinutes(new Date(), env.OTP_TTL_MINUTES);
+  await insertOtp(email, code, 'email_verify', expires);
+  await sendEmail({ to: email, subject: 'Verify your email', html: `<p>Your verification code is <b>${code}</b></p>` });
+}
+
 export async function signupSchool(input: SignupSchoolRequest) {
   const client = await db.connect();
   try {
@@ -91,14 +101,12 @@ export async function signupSchool(input: SignupSchoolRequest) {
       longitude: input.longitude ?? null,
       logo_url: logoUrl ?? null
     });
-    await client.query('COMMIT');
-
-    // email verification OTP
+    // email verification OTP (inside transaction; rollback on failure)
     const code = generateSixDigitOtp();
     const expires = addMinutes(new Date(), env.OTP_TTL_MINUTES);
     await insertOtp(input.email, code, 'email_verify', expires);
     await sendEmail({ to: input.email, subject: 'Verify your email', html: `<p>Your verification code is <b>${code}</b></p>` });
-
+    await client.query('COMMIT');
     return { id: user.id, email: user.email };
   } catch (e) {
     await client.query('ROLLBACK');
@@ -136,13 +144,11 @@ export async function signupParent(input: SignupParentRequest) {
       latitude: input.latitude ?? null,
       longitude: input.longitude ?? null
     });
-    await client.query('COMMIT');
-
     const code = generateSixDigitOtp();
     const expires = addMinutes(new Date(), env.OTP_TTL_MINUTES);
     await insertOtp(input.email, code, 'email_verify', expires);
     await sendEmail({ to: input.email, subject: 'Verify your email', html: `<p>Your verification code is <b>${code}</b></p>` });
-
+    await client.query('COMMIT');
     return { id: user.id, email: user.email };
   } catch (e) {
     await client.query('ROLLBACK');
@@ -185,13 +191,11 @@ export async function signupTeacher(input: SignupTeacherRequest) {
       phone: input.phone ?? null,
       passport_photo_url: passportUrl ?? null
     });
-    await client.query('COMMIT');
-
     const code = generateSixDigitOtp();
     const expires = addMinutes(new Date(), env.OTP_TTL_MINUTES);
     await insertOtp(input.email, code, 'email_verify', expires);
     await sendEmail({ to: input.email, subject: 'Verify your email', html: `<p>Your verification code is <b>${code}</b></p>` });
-
+    await client.query('COMMIT');
     return { id: user.id, email: user.email };
   } catch (e) {
     await client.query('ROLLBACK');
