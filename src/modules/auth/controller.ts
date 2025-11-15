@@ -103,7 +103,7 @@ export async function signupSchool(req: Request, res: Response) {
   const body = { ...req.body };
   const parsed = signupSchoolSchema.safeParse(body);
   if (!parsed.success) return res.status(400).json({ success: false, message: 'validation_error', errors: parsed.error.flatten() });
-  const file = (req as any).file as Express.Multer.File | undefined;
+  const file = (req as any).file as { buffer?: Buffer } | undefined;
   try {
     const result = await service.signupSchool({ ...parsed.data, logoFile: file?.buffer ?? null });
     return sendSuccess(res, result, 'signup_school_success', 201);
@@ -127,7 +127,7 @@ export async function signupTeacher(req: Request, res: Response) {
   const body = { ...req.body };
   const parsed = signupTeacherSchema.safeParse(body);
   if (!parsed.success) return res.status(400).json({ success: false, message: 'validation_error', errors: parsed.error.flatten() });
-  const file = (req as any).file as Express.Multer.File | undefined;
+  const file = (req as any).file as { buffer?: Buffer } | undefined;
   try {
     const result = await service.signupTeacher({ ...parsed.data, passportFile: file?.buffer ?? null });
     return sendSuccess(res, result, 'signup_teacher_success', 201);

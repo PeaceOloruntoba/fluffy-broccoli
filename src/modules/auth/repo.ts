@@ -125,4 +125,20 @@ export async function listSchoolsMinimal(): Promise<Array<{ id: string; school_c
   const { rows } = await db.query(`SELECT id, school_code, name FROM schools ORDER BY name ASC`);
   return rows;
 }
+
+export async function getSchoolByUserId(userId: string): Promise<any | null> {
+  const { rows } = await db.query(`SELECT id, user_id, school_code, name, phone, state, city, country, address, latitude, longitude, logo_url, verified, created_at, updated_at FROM schools WHERE user_id = $1 LIMIT 1`, [userId]);
+  return rows[0] ?? null;
+}
+
+export async function getParentByUserId(userId: string): Promise<any | null> {
+  const { rows } = await db.query(`SELECT id, user_id, school_id, parent_code, fullname, phone_number, nin, relationship, address, latitude, longitude, verified, created_at, updated_at FROM parents WHERE user_id = $1 LIMIT 1`, [userId]);
+  return rows[0] ?? null;
+}
+
+export async function getTeacherByUserId(userId: string): Promise<any | null> {
+  const { rows } = await db.query(`SELECT id, user_id, school_id, teacher_code, name, nin, gender, dob, nationality, state_of_origin, phone, passport_photo_url, verified, created_at, updated_at FROM teachers WHERE user_id = $1 LIMIT 1`, [userId]);
+  return rows[0] ?? null;
+}
+
 export {};

@@ -5,7 +5,7 @@ import { hashPassword, verifyPassword } from '../shared/utils/password.js';
 import { signAccessToken } from '../shared/utils/jwt.js';
 import { sendEmail } from '../shared/services/email.js';
 import type { LoginRequest, LoginResponse } from './type.js';
-import { consumeOtp, createUserTx, deleteOtpsForEmailPurpose, findUserByEmailOrUsername, findValidOtp, getSchoolById, getUserByEmail, insertOtp, insertParentTx, insertSchoolTx, insertTeacherTx, isProfileVerified, reserveUniqueCodeTx, setUserEmailVerifiedByEmail, updateLastLogin, updateUserPassword } from './repo.js';
+import { consumeOtp, createUserTx, deleteOtpsForEmailPurpose, findUserByEmailOrUsername, findValidOtp, getSchoolById, getSchoolByUserId, getParentByUserId, getTeacherByUserId, getUserByEmail, insertOtp, insertParentTx, insertSchoolTx, insertTeacherTx, isProfileVerified, reserveUniqueCodeTx, setUserEmailVerifiedByEmail, updateLastLogin, updateUserPassword } from './repo.js';
 import { db } from '../shared/config/db.js';
 import type { SignupParentRequest, SignupSchoolRequest, SignupTeacherRequest } from './type.js';
 import { uploadBuffer } from '../shared/services/cloudinary.js';
@@ -27,7 +27,18 @@ export async function login(input: LoginRequest): Promise<LoginResponse> {
   await updateLastLogin(user.id);
   const token = await signAccessToken({ sub: user.id, role: user.role });
   const { password, ...safeUser } = user as any;
-  return { token, user: safeUser };
+
+  // Fetch profile based on role
+  let profile: any = null;
+  if (user.role === 'admin') {
+    profile = await getSchoolByUserId(user.id);
+  } else if (user.role === 'parent') {
+    profile = await getParentByUserId(user.id);
+  } else if (user.role === 'teacher') {
+    profile = await getTeacherByUserId(user.id);
+  }
+
+  return { token, user: safeUser, ...(profile && { profile }) };
 }
 
 export async function sendForgotPassword(email: string): Promise<void> {
