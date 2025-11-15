@@ -12,8 +12,28 @@ const schema = z.object({
   SMTP_PORT: z.coerce.number().optional(),
   SMTP_USER: z.string().optional(),
   SMTP_PASS: z.string().optional(),
-  SMTP_SECURE: z.coerce.boolean().default(false),
-  SMTP_REQUIRE_TLS: z.coerce.boolean().default(true),
+  // Booleans are passed as strings in process.env (e.g. "false"). Use preprocess
+  // to convert common string values to real booleans instead of relying on
+  // coercion via Boolean('false') which is truthy.
+  SMTP_SECURE: z.preprocess((val) => {
+    if (typeof val === 'string') return val.trim().toLowerCase() === 'true';
+    return Boolean(val);
+  }, z.boolean().default(false)),
+  SMTP_REQUIRE_TLS: z.preprocess((val) => {
+    if (typeof val === 'string') return val.trim().toLowerCase() === 'true';
+    return Boolean(val);
+  }, z.boolean().default(true)),
+  // When false, allows connecting to servers with self-signed or otherwise
+  // untrusted certificates. Keep true in production; useful for local debugging.
+  SMTP_TLS_REJECT_UNAUTHORIZED: z.preprocess((val) => {
+    if (typeof val === 'string') return val.trim().toLowerCase() === 'true';
+    return Boolean(val);
+  }, z.boolean().default(true)),
+  // Enable verbose SMTP transport logs (nodemailer debug/logger). Default off.
+  SMTP_DEBUG: z.preprocess((val) => {
+    if (typeof val === 'string') return val.trim().toLowerCase() === 'true';
+    return Boolean(val);
+  }, z.boolean().default(false)),
   CLOUDINARY_CLOUD_NAME: z.string().optional(),
   CLOUDINARY_API_KEY: z.string().optional(),
   CLOUDINARY_API_SECRET: z.string().optional(),
