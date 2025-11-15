@@ -4,6 +4,7 @@ import { db } from '../modules/shared/config/db.js';
 import authRouter from '../modules/auth/route.js';
 import { listSchoolsMinimal } from '../modules/auth/repo.js';
 import superadminRouter from '../modules/superadmin/route.js';
+import classesRouter from '../modules/schools/classes/index.js';
 import { requireAuth } from '../modules/shared/middlewares/auth.js';
 
 const router = Router();
@@ -21,6 +22,7 @@ router.get('/health', async (_req, res) => {
 
 router.use('/auth', authRouter);
 router.use('/superadmin', requireAuth(['superadmin']), superadminRouter);
+router.use('/classes', classesRouter);
 
 // Public endpoints
 router.get('/public/schools', async (_req, res, next) => {
