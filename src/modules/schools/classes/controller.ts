@@ -46,7 +46,7 @@ export async function removeClassEndpoint(req: Request, res: Response) {
   }
 
   try {
-    const user = (req as any).user;
+    const user = (req as any).auth;
     if (!user) {
       return sendError(res, 'unauthorized', 401);
     }
