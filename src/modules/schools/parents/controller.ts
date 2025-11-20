@@ -3,6 +3,8 @@ import { z } from 'zod';
 import { sendError, sendSuccess } from '../../shared/utils/response.js';
 import { getSchoolByUserId } from '../../auth/repo.js';
 import * as service from './service.js';
+import * as studentsService from '../students/service.js';
+import * as parentsRepo from './repo.js';
 
 const createSchema = z.object({
   fullname: z.string().min(1),
@@ -19,6 +21,12 @@ const updateSchema = z.object({
   nin: z.string().optional().nullable(),
   relationship: z.enum(['Father','Mother','Aunty','Uncle']).optional().nullable(),
   address: z.string().optional().nullable()
+});
+
+const createStudentSchema = z.object({
+  name: z.string().min(1),
+  reg_no: z.string().optional().nullable(),
+  class_id: z.string().uuid().optional().nullable()
 });
 
 export async function createParent(req: Request, res: Response) {
@@ -95,5 +103,28 @@ export async function verifyParent(req: Request, res: Response) {
     return sendSuccess(res, null, 'parent_verified');
   } catch (e) {
     return sendError(res, e instanceof Error ? e.message : 'verify_parent_failed', 400);
+  }
+}
+
+export async function createStudentForParent(req: Request, res: Response) {
+  const parsed = createStudentSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ success: false, message: 'validation_error', errors: parsed.error.flatten() });
+  try {
+    const user = (req as any).auth;
+    if (!user) return sendError(res, 'unauthorized', 401);
+    const school = await getSchoolByUserId(user.sub);
+    if (!school) return sendError(res, 'school_not_found', 400);
+    const { parentId } = req.params;
+    const parent = await parentsRepo.getParentById(parentId, school.id);
+    if (!parent) return sendError(res, 'parent_not_found_or_unauthorized', 404);
+    const row = await studentsService.createStudent(school.id, {
+      name: parsed.data.name,
+      reg_no: parsed.data.reg_no ?? null,
+      class_id: parsed.data.class_id ?? null,
+      parent_id: parent.user_id
+    });
+    return sendSuccess(res, row, 'student_created', 201);
+  } catch (e) {
+    return sendError(res, e instanceof Error ? e.message : 'create_student_failed', 400);
   }
 }

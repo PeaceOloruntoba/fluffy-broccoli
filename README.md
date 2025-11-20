@@ -152,6 +152,47 @@ When a school (admin user) creates a parent via these endpoints the parent is au
   - Description: List parents for the authenticated admin's school. `filter` is optional (defaults to `all`).
   - Response 200: `{ success:true, message:"parents_list", data: [ { id, user_id, parent_code, fullname, phone_number, nin, relationship, verified, created_at, updated_at }, ... ] }`
 
+- POST `/schools/parents/:parentId/verify`
+  - Description: Verify a parent profile (enables login). School admin only. Only works if the parent belongs to your school.
+  - Response 200: `{ success:true, message:"parent_verified" }`
+
+- POST `/schools/parents/:parentId/students`
+  - Description: Create a student under a specific parent in your school.
+  - Body:
+    ```json
+    { "name": "John Doe", "reg_no": "STU-001", "class_id": "<uuid|null>" }
+    ```
+  - 201: `{ success:true, message:"student_created", data:{ id, name, reg_no, class_id, parent_id } }`
+
+## Students (School admin)
+Base: `/schools/students` (requires Authorization: Bearer <admin-jwt>)
+
+- POST `/schools/students`
+  - Description: Create a student. `name` is required; `reg_no`, `class_id`, and `parent_id` (parent's user id) are optional.
+  - Body:
+    ```json
+    { "name": "John Doe", "reg_no": "STU-001", "class_id": "<uuid|null>", "parent_id": "<parent-user-id|null>" }
+    ```
+  - 201: `{ success:true, message:"student_created", data:{ id, name, reg_no, class_id, parent_id } }`
+
+- POST `/schools/students/bulk` (multipart/form-data)
+  - Description: Bulk create students from CSV/XLSX. Use file field name `file`.
+  - File content expectations:
+    - CSV: two columns per row: `name,reg_no`. Header row optional. Empty lines ignored.
+    - XLSX: first sheet, columns A=name, B=reg_no. Header row optional.
+  - 201: `{ success:true, message:"students_bulk_created", data:{ inserted: <count> } }`
+
+- GET `/schools/students`
+  - Description: List students in the authenticated admin's school.
+
+- PATCH `/schools/students/:studentId`
+  - Description: Update any subset of `name`, `reg_no`, `class_id`, `parent_id`.
+  - 200: `{ success:true, message:"student_updated" }`
+
+- DELETE `/schools/students/:studentId`
+  - Description: Soft delete a student.
+  - 200: `{ success:true, message:"student_deleted" }`
+
 ## Development
 - Dev server: `npm run dev`
 - Migrations: `npm run migrate`
