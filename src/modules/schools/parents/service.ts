@@ -67,3 +67,7 @@ export async function updateParent(parentId: string, schoolId: string, input: Up
     address: input.address ?? undefined
   } as any);
 }
+
+export async function verifyParent(parentId: string, schoolId: string): Promise<boolean> {
+  return repo.setParentVerified(parentId, schoolId, true);
+}

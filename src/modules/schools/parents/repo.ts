@@ -53,3 +53,11 @@ export async function updateParent(parentId: string, schoolId: string, updates: 
   const { rowCount } = await db.query(sql, values);
   return (rowCount ?? 0) > 0;
 }
+
+export async function setParentVerified(parentId: string, schoolId: string, verified: boolean): Promise<boolean> {
+  const { rowCount } = await db.query(
+    `UPDATE parents SET verified = $1, updated_at = now() WHERE id = $2 AND school_id = $3 AND (deleted_at IS NULL)`,
+    [verified, parentId, schoolId]
+  );
+  return (rowCount ?? 0) > 0;
+}

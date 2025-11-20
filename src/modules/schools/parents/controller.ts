@@ -25,7 +25,7 @@ export async function createParent(req: Request, res: Response) {
   const parsed = createSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ success: false, message: 'validation_error', errors: parsed.error.flatten() });
   try {
-    const user = (req as any).user;
+    const user = (req as any).auth;
     if (!user) return sendError(res, 'unauthorized', 401);
     const school = await getSchoolByUserId(user.sub);
     if (!school) return sendError(res, 'school_not_found', 400);
@@ -40,7 +40,7 @@ export async function editParent(req: Request, res: Response) {
   const parsed = updateSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ success: false, message: 'validation_error', errors: parsed.error.flatten() });
   try {
-    const user = (req as any).user;
+    const user = (req as any).auth;
     if (!user) return sendError(res, 'unauthorized', 401);
     const school = await getSchoolByUserId(user.sub);
     if (!school) return sendError(res, 'school_not_found', 400);
@@ -55,7 +55,7 @@ export async function editParent(req: Request, res: Response) {
 
 export async function deleteParent(req: Request, res: Response) {
   try {
-    const user = (req as any).user;
+    const user = (req as any).auth;
     if (!user) return sendError(res, 'unauthorized', 401);
     const school = await getSchoolByUserId(user.sub);
     if (!school) return sendError(res, 'school_not_found', 400);
@@ -70,7 +70,7 @@ export async function deleteParent(req: Request, res: Response) {
 
 export async function listParents(req: Request, res: Response) {
   try {
-    const user = (req as any).user;
+    const user = (req as any).auth;
     if (!user) return sendError(res, 'unauthorized', 401);
     const school = await getSchoolByUserId(user.sub);
     if (!school) return sendError(res, 'school_not_found', 400);
@@ -80,5 +80,20 @@ export async function listParents(req: Request, res: Response) {
     return sendSuccess(res, rows, 'parents_list');
   } catch (e) {
     return sendError(res, e instanceof Error ? e.message : 'list_parents_failed', 400);
+  }
+}
+
+export async function verifyParent(req: Request, res: Response) {
+  try {
+    const user = (req as any).auth;
+    if (!user) return sendError(res, 'unauthorized', 401);
+    const school = await getSchoolByUserId(user.sub);
+    if (!school) return sendError(res, 'school_not_found', 400);
+    const { parentId } = req.params;
+    const ok = await service.verifyParent(parentId, school.id);
+    if (!ok) return sendError(res, 'parent_not_found_or_unauthorized', 404);
+    return sendSuccess(res, null, 'parent_verified');
+  } catch (e) {
+    return sendError(res, e instanceof Error ? e.message : 'verify_parent_failed', 400);
   }
 }

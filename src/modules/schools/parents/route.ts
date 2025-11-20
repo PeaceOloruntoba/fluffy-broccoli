@@ -9,5 +9,6 @@ router.post('/', requireAuth(['admin']), ctrl.createParent);
 router.patch('/:parentId', requireAuth(['admin']), ctrl.editParent);
 router.delete('/:parentId', requireAuth(['admin']), ctrl.deleteParent);
 router.get('/', requireAuth(['admin']), ctrl.listParents);
+router.post('/:parentId/verify', requireAuth(['admin']), ctrl.verifyParent);
 
 export default router;
