@@ -116,6 +116,42 @@ Base: `/superadmin` (requires Authorization: Bearer <superadmin-jwt>)
 - Codes are reserved in a global registry to ensure uniqueness.
 - Login requires `users.email_verified` and the profile `verified` (for admin/parent/teacher/driver).
 
+## Parents (School admin)
+Base: `/schools/parents` (requires Authorization: Bearer <admin-jwt>)
+
+When a school (admin user) creates a parent via these endpoints the parent is automatically verified and the parent's user record will have `email_verified = true`.
+
+- POST `/schools/parents`
+  - Description: Create a parent account as the school. The backend will create the `users` and `parents` records in a transaction, mark both `users.email_verified` and `parents.verified` as true.
+  - Body:
+    ```json
+    {
+      "fullname": "Jane Doe",
+      "phonenumber": "+2348012345678",
+      "nin": "12345678901",       
+      "relationship": "Mother",
+      "email": "parent@example.com",
+      "password": "secret123"
+    }
+    ```
+  - Response 201: `{ success:true, message:"parent_created", data:{ id: "<user-id>", email: "parent@example.com", fullname: "Jane Doe" } }`
+
+- PATCH `/schools/parents/:parentId`
+  - Description: Update parent profile (school admin only). Only parent fields (fullname, phonenumber, nin, relationship, address) can be updated here.
+  - Body (any subset):
+    ```json
+    { "fullname": "Jane Doe", "phonenumber": "+234...", "address": "..." }
+    ```
+  - Response 200: `{ success:true, message:"parent_updated" }`
+
+- DELETE `/schools/parents/:parentId`
+  - Description: Soft-delete a parent (set `deleted_at`). School admin only.
+  - Response 200: `{ success:true, message:"parent_deleted" }`
+
+- GET `/schools/parents?filter=all|verified|unverified`
+  - Description: List parents for the authenticated admin's school. `filter` is optional (defaults to `all`).
+  - Response 200: `{ success:true, message:"parents_list", data: [ { id, user_id, parent_code, fullname, phone_number, nin, relationship, verified, created_at, updated_at }, ... ] }`
+
 ## Development
 - Dev server: `npm run dev`
 - Migrations: `npm run migrate`
