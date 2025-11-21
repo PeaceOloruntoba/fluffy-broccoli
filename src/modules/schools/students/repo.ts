@@ -72,6 +72,50 @@ export async function updateStudent(id: string, schoolId: string, updates: Parti
   return (rowCount ?? 0) > 0;
 }
 
+export async function upsertStudentBusesBulk(schoolId: string, busId: string, studentIds: string[]): Promise<number> {
+  if (studentIds.length === 0) return 0;
+  const values: any[] = [];
+  const chunks: string[] = [];
+  let i = 1;
+  for (const sid of studentIds) {
+    chunks.push(`($${i++}, $${i++}, $${i++})`);
+    values.push(schoolId, sid, busId);
+  }
+  const sql = `INSERT INTO student_buses (school_id, student_id, bus_id)
+               VALUES ${chunks.join(',')}
+               ON CONFLICT (student_id) DO UPDATE SET bus_id = EXCLUDED.bus_id, updated_at = now()`;
+  const result = await db.query(sql, values);
+  return result.rowCount ?? 0;
+}
+
+export async function upsertStudentClassesBulk(schoolId: string, classId: string, studentIds: string[]): Promise<number> {
+  if (studentIds.length === 0) return 0;
+  const values: any[] = [];
+  const chunks: string[] = [];
+  let i = 1;
+  for (const sid of studentIds) {
+    chunks.push(`($${i++}, $${i++}, $${i++})`);
+    values.push(schoolId, sid, classId);
+  }
+  const sql = `INSERT INTO student_classes (school_id, student_id, class_id)
+               VALUES ${chunks.join(',')}
+               ON CONFLICT (student_id) DO UPDATE SET class_id = EXCLUDED.class_id, updated_at = now()`;
+  const result = await db.query(sql, values);
+  return result.rowCount ?? 0;
+}
+
+export async function updateStudentsClassBulk(schoolId: string, classId: string, studentIds: string[]): Promise<number> {
+  if (studentIds.length === 0) return 0;
+  const params: any[] = [classId, schoolId];
+  const inParams: string[] = [];
+  let i = 3;
+  for (const sid of studentIds) { inParams.push(`$${i++}`); params.push(sid); }
+  const sql = `UPDATE students SET class_id = $1, updated_at = now()
+               WHERE school_id = $2 AND id IN (${inParams.join(',')}) AND deleted_at IS NULL`;
+  const result = await db.query(sql, params);
+  return result.rowCount ?? 0;
+}
+
 export async function getStudentByIdWithParent(id: string, schoolId: string): Promise<any | null> {
   const { rows } = await db.query(
     `SELECT 

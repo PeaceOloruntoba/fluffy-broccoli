@@ -52,3 +52,19 @@ export async function setTeacherVerified(id: string, schoolId: string, verified:
   );
   return (rowCount ?? 0) > 0;
 }
+
+export async function upsertTeacherClass(schoolId: string, teacherId: string, classId: string): Promise<void> {
+  await db.query(
+    `INSERT INTO teacher_classes (school_id, teacher_id, class_id)
+     VALUES ($1,$2,$3)
+     ON CONFLICT (teacher_id) DO UPDATE SET class_id = EXCLUDED.class_id, updated_at = now()`,
+    [schoolId, teacherId, classId]
+  );
+}
+
+export async function deleteTeacherClass(schoolId: string, teacherId: string): Promise<void> {
+  await db.query(
+    `DELETE FROM teacher_classes WHERE school_id = $1 AND teacher_id = $2`,
+    [schoolId, teacherId]
+  );
+}

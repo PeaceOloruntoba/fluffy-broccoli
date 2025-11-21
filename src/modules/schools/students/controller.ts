@@ -143,3 +143,37 @@ export async function deleteStudent(req: Request, res: Response) {
     return sendError(res, e instanceof Error ? e.message : 'delete_student_failed', 400);
   }
 }
+
+const assignStudentsSchema = z.object({
+  student_ids: z.array(z.string().uuid()).min(1)
+});
+
+export async function assignStudentsToBus(req: Request, res: Response) {
+  const parsed = assignStudentsSchema.extend({ bus_id: z.string().uuid() }).safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ success: false, message: 'validation_error', errors: parsed.error.flatten() });
+  try {
+    const user = (req as any).auth;
+    if (!user) return sendError(res, 'unauthorized', 401);
+    const school = await getSchoolByUserId(user.sub);
+    if (!school) return sendError(res, 'school_not_found', 400);
+    const count = await service.assignStudentsToBus(school.id, parsed.data.bus_id, parsed.data.student_ids);
+    return sendSuccess(res, { assigned: count }, 'students_assigned_to_bus');
+  } catch (e) {
+    return sendError(res, e instanceof Error ? e.message : 'assign_students_bus_failed', 400);
+  }
+}
+
+export async function assignStudentsToClass(req: Request, res: Response) {
+  const parsed = assignStudentsSchema.extend({ class_id: z.string().uuid() }).safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ success: false, message: 'validation_error', errors: parsed.error.flatten() });
+  try {
+    const user = (req as any).auth;
+    if (!user) return sendError(res, 'unauthorized', 401);
+    const school = await getSchoolByUserId(user.sub);
+    if (!school) return sendError(res, 'school_not_found', 400);
+    const result = await service.assignStudentsToClass(school.id, parsed.data.class_id, parsed.data.student_ids);
+    return sendSuccess(res, result, 'students_assigned_to_class');
+  } catch (e) {
+    return sendError(res, e instanceof Error ? e.message : 'assign_students_class_failed', 400);
+  }
+}

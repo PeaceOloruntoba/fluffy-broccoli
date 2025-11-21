@@ -76,3 +76,11 @@ export async function removeTeacher(teacherId: string, schoolId: string) {
 export async function verifyTeacher(teacherId: string, schoolId: string): Promise<boolean> {
   return repo.setTeacherVerified(teacherId, schoolId, true);
 }
+
+export async function assignTeacherToClass(schoolId: string, teacherId: string, classId: string): Promise<void> {
+  await repo.upsertTeacherClass(schoolId, teacherId, classId);
+}
+
+export async function unassignTeacherFromClass(schoolId: string, teacherId: string): Promise<void> {
+  await repo.deleteTeacherClass(schoolId, teacherId);
+}

@@ -49,6 +49,13 @@ export async function upsertDriverBus(schoolId: string, driverId: string, busId:
   );
 }
 
+export async function deleteDriverBus(schoolId: string, driverId: string): Promise<void> {
+  await db.query(
+    `DELETE FROM driver_buses WHERE school_id = $1 AND driver_id = $2`,
+    [schoolId, driverId]
+  );
+}
+
 export async function getDriverWithBusAndStudents(driverId: string, schoolId: string): Promise<any | null> {
   const { rows } = await db.query(
     `WITH drv AS (

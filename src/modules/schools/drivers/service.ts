@@ -56,3 +56,7 @@ export async function removeDriver(driverId: string, schoolId: string) {
 export async function assignDriverToBus(schoolId: string, driverId: string, busId: string): Promise<void> {
   await repo.upsertDriverBus(schoolId, driverId, busId);
 }
+
+export async function unassignDriverFromBus(schoolId: string, driverId: string): Promise<void> {
+  await repo.deleteDriverBus(schoolId, driverId);
+}

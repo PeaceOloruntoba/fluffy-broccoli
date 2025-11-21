@@ -11,4 +11,8 @@ router.patch('/:teacherId', requireAuth(['admin']), ctrl.editTeacher);
 router.delete('/:teacherId', requireAuth(['admin']), ctrl.deleteTeacher);
 router.post('/:teacherId/verify', requireAuth(['admin']), ctrl.verifyTeacher);
 
+// Relationships
+router.post('/:teacherId/class', requireAuth(['admin']), ctrl.assignTeacherClass);
+router.delete('/:teacherId/class', requireAuth(['admin']), ctrl.unassignTeacherClass);
+
 export default router;

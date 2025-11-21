@@ -115,3 +115,35 @@ export async function verifyTeacher(req: Request, res: Response) {
     return sendError(res, e instanceof Error ? e.message : 'verify_teacher_failed', 400);
   }
 }
+
+const assignClassSchema = z.object({ class_id: z.string().uuid() });
+
+export async function assignTeacherClass(req: Request, res: Response) {
+  const parsed = assignClassSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ success: false, message: 'validation_error', errors: parsed.error.flatten() });
+  try {
+    const user = (req as any).auth;
+    if (!user) return sendError(res, 'unauthorized', 401);
+    const school = await getSchoolByUserId(user.sub);
+    if (!school) return sendError(res, 'school_not_found', 400);
+    const { teacherId } = req.params;
+    await service.assignTeacherToClass(school.id, teacherId, parsed.data.class_id);
+    return sendSuccess(res, null, 'teacher_assigned_to_class');
+  } catch (e) {
+    return sendError(res, e instanceof Error ? e.message : 'assign_teacher_failed', 400);
+  }
+}
+
+export async function unassignTeacherClass(req: Request, res: Response) {
+  try {
+    const user = (req as any).auth;
+    if (!user) return sendError(res, 'unauthorized', 401);
+    const school = await getSchoolByUserId(user.sub);
+    if (!school) return sendError(res, 'school_not_found', 400);
+    const { teacherId } = req.params;
+    await service.unassignTeacherFromClass(school.id, teacherId);
+    return sendSuccess(res, null, 'teacher_unassigned_from_class');
+  } catch (e) {
+    return sendError(res, e instanceof Error ? e.message : 'unassign_teacher_failed', 400);
+  }
+}

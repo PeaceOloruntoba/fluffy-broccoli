@@ -1,5 +1,6 @@
 import * as repo from './repo.js';
 import type { CreateStudentRequest, UpdateStudentRequest, Student } from './type.js';
+import { db } from '../../shared/config/db.js';
 
 export async function createStudent(schoolId: string, input: CreateStudentRequest): Promise<Student> {
   return repo.insertStudent({
@@ -45,4 +46,24 @@ export async function updateStudent(studentId: string, schoolId: string, input: 
 
 export async function removeStudent(studentId: string, schoolId: string): Promise<boolean> {
   return repo.softDeleteStudent(studentId, schoolId);
+}
+
+export async function assignStudentsToBus(schoolId: string, busId: string, studentIds: string[]): Promise<number> {
+  return repo.upsertStudentBusesBulk(schoolId, busId, studentIds);
+}
+
+export async function assignStudentsToClass(schoolId: string, classId: string, studentIds: string[]): Promise<{ linked: number; updated: number }> {
+  const client = await db.connect();
+  try {
+    await client.query('BEGIN');
+    const linked = await repo.upsertStudentClassesBulk(schoolId, classId, studentIds);
+    const updated = await repo.updateStudentsClassBulk(schoolId, classId, studentIds);
+    await client.query('COMMIT');
+    return { linked, updated };
+  } catch (e) {
+    await client.query('ROLLBACK');
+    throw e;
+  } finally {
+    client.release();
+  }
 }

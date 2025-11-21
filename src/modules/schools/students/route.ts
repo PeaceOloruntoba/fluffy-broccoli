@@ -13,4 +13,8 @@ router.get('/:studentId', requireAuth(['admin']), ctrl.getStudentById);
 router.patch('/:studentId', requireAuth(['admin']), ctrl.editStudent);
 router.delete('/:studentId', requireAuth(['admin']), ctrl.deleteStudent);
 
+// Relationships (bulk)
+router.post('/assign/bus', requireAuth(['admin']), ctrl.assignStudentsToBus);
+router.post('/assign/class', requireAuth(['admin']), ctrl.assignStudentsToClass);
+
 export default router;

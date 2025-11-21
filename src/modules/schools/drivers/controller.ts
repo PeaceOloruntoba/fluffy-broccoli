@@ -107,3 +107,17 @@ export async function assignDriverBus(req: Request, res: Response) {
     return sendError(res, e instanceof Error ? e.message : 'assign_driver_failed', 400);
   }
 }
+
+export async function unassignDriverBus(req: Request, res: Response) {
+  try {
+    const user = (req as any).auth;
+    if (!user) return sendError(res, 'unauthorized', 401);
+    const school = await getSchoolByUserId(user.sub);
+    if (!school) return sendError(res, 'school_not_found', 400);
+    const { driverId } = req.params;
+    await service.unassignDriverFromBus(school.id, driverId);
+    return sendSuccess(res, null, 'driver_unassigned_from_bus');
+  } catch (e) {
+    return sendError(res, e instanceof Error ? e.message : 'unassign_driver_failed', 400);
+  }
+}

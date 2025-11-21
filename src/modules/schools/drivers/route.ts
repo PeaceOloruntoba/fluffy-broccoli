@@ -10,4 +10,8 @@ router.get('/:driverId', requireAuth(['admin']), ctrl.getDriverById);
 router.patch('/:driverId', requireAuth(['admin']), ctrl.editDriver);
 router.delete('/:driverId', requireAuth(['admin']), ctrl.deleteDriver);
 
+// Relationships
+router.post('/:driverId/bus', requireAuth(['admin']), ctrl.assignDriverBus);
+router.delete('/:driverId/bus', requireAuth(['admin']), ctrl.unassignDriverBus);
+
 export default router;
