@@ -89,3 +89,21 @@ export async function deleteDriver(req: Request, res: Response) {
     return sendError(res, e instanceof Error ? e.message : 'delete_driver_failed', 400);
   }
 }
+
+const assignBusSchema = z.object({ bus_id: z.string().uuid() });
+
+export async function assignDriverBus(req: Request, res: Response) {
+  const parsed = assignBusSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ success: false, message: 'validation_error', errors: parsed.error.flatten() });
+  try {
+    const user = (req as any).auth;
+    if (!user) return sendError(res, 'unauthorized', 401);
+    const school = await getSchoolByUserId(user.sub);
+    if (!school) return sendError(res, 'school_not_found', 400);
+    const { driverId } = req.params;
+    await service.assignDriverToBus(school.id, driverId, parsed.data.bus_id);
+    return sendSuccess(res, null, 'driver_assigned_to_bus');
+  } catch (e) {
+    return sendError(res, e instanceof Error ? e.message : 'assign_driver_failed', 400);
+  }
+}

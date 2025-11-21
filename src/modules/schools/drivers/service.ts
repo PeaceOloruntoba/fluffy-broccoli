@@ -39,7 +39,7 @@ export async function listDrivers(schoolId: string) {
 }
 
 export async function getDriver(driverId: string, schoolId: string) {
-  return repo.getDriverById(driverId, schoolId);
+  return repo.getDriverWithBusAndStudents(driverId, schoolId);
 }
 
 export async function updateDriver(driverId: string, schoolId: string, input: UpdateDriverRequest) {
@@ -51,4 +51,8 @@ export async function updateDriver(driverId: string, schoolId: string, input: Up
 
 export async function removeDriver(driverId: string, schoolId: string) {
   return repo.softDeleteDriver(driverId, schoolId);
+}
+
+export async function assignDriverToBus(schoolId: string, driverId: string, busId: string): Promise<void> {
+  await repo.upsertDriverBus(schoolId, driverId, busId);
 }

@@ -39,3 +39,40 @@ export async function softDeleteDriver(id: string, schoolId: string): Promise<bo
   );
   return (rowCount ?? 0) > 0;
 }
+
+export async function upsertDriverBus(schoolId: string, driverId: string, busId: string): Promise<void> {
+  await db.query(
+    `INSERT INTO driver_buses (school_id, driver_id, bus_id)
+     VALUES ($1,$2,$3)
+     ON CONFLICT (driver_id) DO UPDATE SET bus_id = EXCLUDED.bus_id, updated_at = now()`,
+    [schoolId, driverId, busId]
+  );
+}
+
+export async function getDriverWithBusAndStudents(driverId: string, schoolId: string): Promise<any | null> {
+  const { rows } = await db.query(
+    `WITH drv AS (
+       SELECT d.id, d.user_id, d.school_id, d.code, d.name, d.phone, d.created_at, d.updated_at
+       FROM drivers d WHERE d.id = $1 AND d.school_id = $2 AND d.deleted_at IS NULL
+     ),
+     link AS (
+       SELECT db.bus_id FROM driver_buses db JOIN drv ON db.driver_id = drv.id WHERE db.school_id = $2
+     ),
+     bus AS (
+       SELECT b.id, b.name, b.plate_number, b.code FROM buses b JOIN link l ON l.bus_id = b.id WHERE b.deleted_at IS NULL
+     ),
+     studs AS (
+       SELECT s.id, s.name, s.reg_no, s.class_id, s.parent_user_id AS parent_id
+       FROM student_buses sb
+       JOIN students s ON s.id = sb.student_id
+       WHERE sb.bus_id = (SELECT bus_id FROM link LIMIT 1) AND sb.school_id = $2 AND s.deleted_at IS NULL
+     )
+     SELECT (SELECT row_to_json(drv) FROM drv) AS driver,
+            (SELECT row_to_json(bus) FROM bus) AS bus,
+            (SELECT coalesce(json_agg(studs), '[]'::json) FROM studs) AS students;`,
+    [driverId, schoolId]
+  );
+  const r = rows[0];
+  if (!r?.driver) return null;
+  return { ...r.driver, bus: r.bus ?? null, students: r.students ?? [] };
+}
