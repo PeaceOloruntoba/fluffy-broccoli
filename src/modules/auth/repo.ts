@@ -87,6 +87,14 @@ export async function insertTeacherTx(client: PoolClient, params: { user_id: str
   );
 }
 
+export async function insertDriverTx(client: PoolClient, params: { user_id: string; school_id: string; driver_code: string; name?: string | null; phone?: string | null }) {
+  await client.query(
+    `INSERT INTO drivers (user_id, school_id, code, name, phone, created_at, updated_at)
+     VALUES ($1,$2,$3,$4,$5, now(), now())`,
+    [params.user_id, params.school_id, params.driver_code, params.name ?? null, params.phone ?? null]
+  );
+}
+
 export async function getSchoolById(id: string): Promise<{ id: string; school_code: string | null; name: string } | null> {
   const { rows } = await db.query(`SELECT id, school_code, name FROM schools WHERE id=$1`, [id]);
   return rows[0] ?? null;

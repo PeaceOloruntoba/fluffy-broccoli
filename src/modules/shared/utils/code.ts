@@ -18,8 +18,18 @@ export function generateSchoolCode(schoolName: string): string {
   return `${pref}-${random4()}`;
 }
 
-export function generatePersonCode(prefix: 'PA' | 'TE' | 'DR', schoolCode: string, personName: string): string {
+export function generatePersonCode(prefix: 'PT' | 'TE' | 'DR', schoolCode: string, personName: string): string {
   const schoolPart = schoolCode.split('-')[0] || initialsFromName(personName, 3);
   const personInit = initialsFromName(personName, 2);
-  return `${prefix}-${schoolPart}-${personInit}-${random4()}`;
+  return `${schoolPart}-${prefix}-${personInit}-${random4()}`;
+}
+
+export function generateBusCode(schoolCode: string): string {
+  const schoolPart = schoolCode.split('-')[0];
+  return `${schoolPart}-BUS-${random4()}`;
+}
+
+export function generateDriverCode(schoolCode: string): string {
+  const schoolPart = schoolCode.split('-')[0];
+  return `${schoolPart}-DRV-${random4()}`;
 }

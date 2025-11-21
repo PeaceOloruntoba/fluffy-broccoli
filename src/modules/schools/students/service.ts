@@ -22,12 +22,16 @@ export async function bulkCreateStudents(schoolId: string, rows: Array<{ name: s
   return repo.bulkInsertStudents(payload);
 }
 
-export async function listStudents(schoolId: string): Promise<Student[]> {
-  return repo.listStudentsBySchool(schoolId);
+export async function listStudents(schoolId: string, classId?: string | null): Promise<Student[]> {
+  return repo.listStudentsBySchool(schoolId, classId ?? undefined);
 }
 
 export async function getStudent(studentId: string, schoolId: string): Promise<Student | null> {
   return repo.getStudentById(studentId, schoolId);
+}
+
+export async function getStudentWithParent(studentId: string, schoolId: string): Promise<any | null> {
+  return repo.getStudentByIdWithParent(studentId, schoolId);
 }
 
 export async function updateStudent(studentId: string, schoolId: string, input: UpdateStudentRequest): Promise<boolean> {

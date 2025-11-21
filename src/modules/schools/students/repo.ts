@@ -34,11 +34,14 @@ export async function getStudentById(id: string, schoolId: string): Promise<Stud
   return rows[0] ?? null;
 }
 
-export async function listStudentsBySchool(schoolId: string): Promise<Student[]> {
+export async function listStudentsBySchool(schoolId: string, classId?: string | null): Promise<Student[]> {
+  const params: any[] = [schoolId];
+  let where = `school_id = $1 AND (deleted_at IS NULL)`;
+  if (classId) { where += ` AND class_id = $2`; params.push(classId); }
   const { rows } = await db.query(
     `SELECT id, school_id, name, reg_no, class_id, parent_user_id as parent_id, created_at, updated_at, deleted_at
-     FROM students WHERE school_id = $1 AND (deleted_at IS NULL) ORDER BY created_at DESC`,
-    [schoolId]
+     FROM students WHERE ${where} ORDER BY created_at DESC`,
+    params
   );
   return rows;
 }
@@ -69,10 +72,48 @@ export async function updateStudent(id: string, schoolId: string, updates: Parti
   return (rowCount ?? 0) > 0;
 }
 
+export async function getStudentByIdWithParent(id: string, schoolId: string): Promise<any | null> {
+  const { rows } = await db.query(
+    `SELECT 
+       s.id, s.school_id, s.name, s.reg_no, s.class_id, s.parent_user_id as parent_id, s.created_at, s.updated_at, s.deleted_at,
+       p.id as parent_profile_id, p.parent_code as parent_code, p.fullname as parent_fullname, p.phone_number as parent_phone_number,
+       u.email as parent_email, u.name as parent_user_name
+     FROM students s
+     LEFT JOIN parents p ON p.user_id = s.parent_user_id AND p.school_id = s.school_id
+     LEFT JOIN users u ON u.id = s.parent_user_id
+     WHERE s.id = $1 AND s.school_id = $2 AND (s.deleted_at IS NULL)
+     LIMIT 1`,
+    [id, schoolId]
+  );
+  return rows[0] ?? null;
+}
+
 export async function softDeleteStudent(id: string, schoolId: string): Promise<boolean> {
   const { rowCount } = await db.query(
     `UPDATE students SET deleted_at = now() WHERE id = $1 AND school_id = $2 AND (deleted_at IS NULL)`,
     [id, schoolId]
+  );
+  return (rowCount ?? 0) > 0;
+}
+
+export async function updateStudentForParent(id: string, parentUserId: string, updates: Partial<{ name: string | null; reg_no: string | null; class_id: string | null }>): Promise<boolean> {
+  const fields: string[] = [];
+  const values: any[] = [];
+  let idx = 1;
+  if (updates.name !== undefined) { fields.push(`name = $${idx++}`); values.push(updates.name); }
+  if (updates.reg_no !== undefined) { fields.push(`reg_no = $${idx++}`); values.push(updates.reg_no); }
+  if (updates.class_id !== undefined) { fields.push(`class_id = $${idx++}`); values.push(updates.class_id); }
+  if (fields.length === 0) return false;
+  values.push(id, parentUserId);
+  const sql = `UPDATE students SET ${fields.join(', ')}, updated_at = now() WHERE id = $${idx++} AND parent_user_id = $${idx++} AND (deleted_at IS NULL)`;
+  const { rowCount } = await db.query(sql, values);
+  return (rowCount ?? 0) > 0;
+}
+
+export async function softDeleteStudentForParent(id: string, parentUserId: string): Promise<boolean> {
+  const { rowCount } = await db.query(
+    `UPDATE students SET deleted_at = now() WHERE id = $1 AND parent_user_id = $2 AND (deleted_at IS NULL)`,
+    [id, parentUserId]
   );
   return (rowCount ?? 0) > 0;
 }

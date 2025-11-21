@@ -16,7 +16,7 @@ export async function createParentAsSchool(schoolId: string, schoolUserId: strin
     // generate unique parent code
     let parentCode = '';
     for (let i = 0; i < 5; i++) {
-      const code = generatePersonCode('PA', /* school code not available here; use school id short */ schoolId.slice(0,4), input.fullname);
+      const code = generatePersonCode('PT', /* school code not available here; use school id short */ schoolId.slice(0,4), input.fullname);
       const ok = await reserveUniqueCodeTx(client, code);
       if (ok) { parentCode = code; break; }
     }

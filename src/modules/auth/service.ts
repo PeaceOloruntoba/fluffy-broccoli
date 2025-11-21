@@ -138,7 +138,7 @@ export async function signupParent(input: SignupParentRequest) {
     // generate unique parent code
     let parentCode = '';
     for (let i = 0; i < 5; i++) {
-      const code = generatePersonCode('PA', school.school_code, input.fullname);
+      const code = generatePersonCode('PT', school.school_code, input.fullname);
       const ok = await reserveUniqueCodeTx(client, code);
       if (ok) { parentCode = code; break; }
     }

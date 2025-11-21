@@ -33,6 +33,21 @@ export async function createStudent(req: Request, res: Response) {
   }
 }
 
+export async function getStudentById(req: Request, res: Response) {
+  try {
+    const user = (req as any).auth;
+    if (!user) return sendError(res, 'unauthorized', 401);
+    const school = await getSchoolByUserId(user.sub);
+    if (!school) return sendError(res, 'school_not_found', 400);
+    const { studentId } = req.params;
+    const row = await service.getStudentWithParent(studentId, school.id);
+    if (!row) return sendError(res, 'student_not_found_or_unauthorized', 404);
+    return sendSuccess(res, row, 'student_details');
+  } catch (e) {
+    return sendError(res, e instanceof Error ? e.message : 'get_student_failed', 400);
+  }
+}
+
 export async function bulkCreateStudents(req: Request, res: Response) {
   try {
     const user = (req as any).auth;
@@ -88,7 +103,9 @@ export async function listStudents(req: Request, res: Response) {
     if (!user) return sendError(res, 'unauthorized', 401);
     const school = await getSchoolByUserId(user.sub);
     if (!school) return sendError(res, 'school_not_found', 400);
-    const rows = await service.listStudents(school.id);
+    const { class_id } = req.query as any;
+    const classId = typeof class_id === 'string' && class_id.length > 0 ? class_id : undefined;
+    const rows = await service.listStudents(school.id, classId);
     return sendSuccess(res, rows, 'students_list');
   } catch (e) {
     return sendError(res, e instanceof Error ? e.message : 'list_students_failed', 400);

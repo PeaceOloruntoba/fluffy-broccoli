@@ -7,6 +7,9 @@ import superadminRouter from '../modules/superadmin/route.js';
 import classesRouter from '../modules/schools/classes/index.js';
 import parentsRouter from '../modules/schools/parents/route.js';
 import studentsRouter from '../modules/schools/students/index.js';
+import parentStudentsRouter from '../modules/parents/students/route.js';
+import busesRouter from '../modules/schools/buses/index.js';
+import driversRouter from '../modules/schools/drivers/route.js';
 import { requireAuth } from '../modules/shared/middlewares/auth.js';
 
 const router = Router();
@@ -27,6 +30,9 @@ router.use('/superadmin', requireAuth(['superadmin']), superadminRouter);
 router.use('/classes', classesRouter);
 router.use('/schools/parents', parentsRouter);
 router.use('/schools/students', studentsRouter);
+router.use('/parents/students', parentStudentsRouter);
+router.use('/schools/buses', busesRouter);
+router.use('/schools/drivers', driversRouter);
 
 // Public endpoints
 router.get('/public/schools', async (_req, res, next) => {

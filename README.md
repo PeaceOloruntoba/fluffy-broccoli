@@ -112,7 +112,10 @@ Base: `/superadmin` (requires Authorization: Bearer <superadmin-jwt>)
 
 ## Codes and verification
 - `school_code`: `ABC-1234` generated from school initials + 4 digits.
-- `parent_code`: `PA-ABC-JD-1234`; `teacher_code`: `TE-ABC-JD-1234`.
+- `parent_code`: `ABC-PT-JD-1234` (e.g., `PH-PT-PO-0001`).
+- `teacher_code`: `ABC-TE-JD-1234`.
+- `driver_code`: `ABC-DRV-1234` (e.g., `PH-DRV-8349`).
+- `bus_code`: `ABC-BUS-1234` (e.g., `PH-BUS-9283`).
 - Codes are reserved in a global registry to ensure uniqueness.
 - Login requires `users.email_verified` and the profile `verified` (for admin/parent/teacher/driver).
 
@@ -150,7 +153,7 @@ When a school (admin user) creates a parent via these endpoints the parent is au
 
 - GET `/schools/parents?filter=all|verified|unverified`
   - Description: List parents for the authenticated admin's school. `filter` is optional (defaults to `all`).
-  - Response 200: `{ success:true, message:"parents_list", data: [ { id, user_id, parent_code, fullname, phone_number, nin, relationship, verified, created_at, updated_at }, ... ] }`
+  - Response 200: `{ success:true, message:"parents_list", data: [ { id, user_id, parent_code, fullname, phone_number, nin, relationship, verified, created_at, updated_at, user_name, user_username, user_email, user_email_verified }, ... ] }`
 
 - POST `/schools/parents/:parentId/verify`
   - Description: Verify a parent profile (enables login). School admin only. Only works if the parent belongs to your school.
@@ -182,8 +185,9 @@ Base: `/schools/students` (requires Authorization: Bearer <admin-jwt>)
     - XLSX: first sheet, columns A=name, B=reg_no. Header row optional.
   - 201: `{ success:true, message:"students_bulk_created", data:{ inserted: <count> } }`
 
-- GET `/schools/students`
+- GET `/schools/students?class_id=<uuid>`
   - Description: List students in the authenticated admin's school.
+  - Optional query `class_id` filters students by class.
 
 - PATCH `/schools/students/:studentId`
   - Description: Update any subset of `name`, `reg_no`, `class_id`, `parent_id`.
@@ -192,6 +196,170 @@ Base: `/schools/students` (requires Authorization: Bearer <admin-jwt>)
 - DELETE `/schools/students/:studentId`
   - Description: Soft delete a student.
   - 200: `{ success:true, message:"student_deleted" }`
+
+- GET `/schools/students/:studentId`
+  - Description: Get a student's details plus parent info. Future extras (attendance, tracking) may be included later.
+  - 200 example:
+    ```json
+    {
+      "success": true,
+      "message": "student_details",
+      "data": {
+        "id": "...",
+        "school_id": "...",
+        "name": "John Doe",
+        "reg_no": "STU-001",
+        "class_id": "...",
+        "parent_id": "<parent-user-id>",
+        "parent_profile_id": "<parents.id>",
+        "parent_code": "PH-PT-PO-0001",
+        "parent_fullname": "Jane Doe",
+        "parent_phone_number": "+234...",
+        "parent_email": "parent@example.com",
+        "parent_user_name": "Jane Doe"
+      }
+    }
+    ```
+
+## Students (Parent self-service)
+Base: `/parents/students` (requires Authorization: Bearer <parent-jwt>)
+
+- POST `/parents/students`
+  - Create a student under the logged-in parent. Uses the parent's `school_id` from profile automatically.
+  - Body:
+    ```json
+    { "name": "Jane Jr.", "reg_no": "REG-1", "class_id": "<uuid|null>" }
+    ```
+  - 201: `{ success:true, message:"student_created", data:{ id, name, reg_no, class_id, parent_id } }`
+
+- GET `/parents/students`
+  - List all students belonging to the logged-in parent.
+
+- PATCH `/parents/students/:studentId`
+  - Update `name`, `reg_no`, `class_id` of own student.
+
+- DELETE `/parents/students/:studentId`
+  - Soft delete own student.
+
+## Buses (School admin)
+Base: `/schools/buses` (requires Authorization: Bearer <admin-jwt>)
+
+- POST `/schools/buses`
+  - Description: Create a bus for the school. Generates a unique bus `code` like `PH-BUS-0001`.
+  - Body:
+    ```json
+    { "name": "Bus A", "plate_number": "AAA-123" }
+    ```
+  - 201:
+    ```json
+    {
+      "success": true,
+      "message": "bus_created",
+      "data": { "id": "...", "name": "Bus A", "plate_number": "AAA-123", "code": "PH-BUS-1234" }
+    }
+    ```
+
+- GET `/schools/buses`
+  - Description: List buses for the authenticated admin's school.
+  - 200:
+    ```json
+    {
+      "success": true,
+      "message": "buses_list",
+      "data": [
+        { "id": "...", "name": "Bus A", "plate_number": "AAA-123", "code": "PH-BUS-1234", "school_id": "...", "created_at": "...", "updated_at": "..." }
+      ]
+    }
+    ```
+
+- GET `/schools/buses/:busId`
+  - Description: Get a single bus by id.
+  - 200:
+    ```json
+    {
+      "success": true,
+      "message": "bus_details",
+      "data": { "id": "...", "name": "Bus A", "plate_number": "AAA-123", "code": "PH-BUS-1234", "school_id": "...", "created_at": "...", "updated_at": "..." }
+    }
+    ```
+
+- PATCH `/schools/buses/:busId`
+  - Description: Update `name`, `plate_number`.
+  - Body (any subset):
+    ```json
+    { "name": "Bus A (updated)" }
+    ```
+  - 200:
+    ```json
+    { "success": true, "message": "bus_updated" }
+    ```
+
+- DELETE `/schools/buses/:busId`
+  - Description: Soft delete a bus.
+  - 200:
+    ```json
+    { "success": true, "message": "bus_deleted" }
+    ```
+
+## Drivers (School admin)
+Base: `/schools/drivers` (requires Authorization: Bearer <admin-jwt>)
+
+Note: Drivers are users but do not log in. Creating a driver creates a `users` row (role `driver`) with a random password, then a `drivers` row with a unique code.
+
+- POST `/schools/drivers`
+  - Description: Create a driver user and driver profile with a unique `code` like `PH-DRV-0001`.
+  - Body:
+    ```json
+    { "name": "John Driver", "email": "jd@example.com", "phone": "+234..." }
+    ```
+  - 201:
+    ```json
+    {
+      "success": true,
+      "message": "driver_created",
+      "data": { "id": "<user-id>", "email": "jd@example.com", "code": "PH-DRV-0001", "user_id": "<user-id>", "school_id": "..." }
+    }
+    ```
+
+- GET `/schools/drivers`
+  - Description: List drivers for the authenticated admin's school.
+  - 200:
+    ```json
+    {
+      "success": true,
+      "message": "drivers_list",
+      "data": [ { "id": "...", "user_id": "...", "school_id": "...", "code": "PH-DRV-0001", "name": "John Driver", "phone": "+234..." } ]
+    }
+    ```
+
+- GET `/schools/drivers/:driverId`
+  - Description: Get a single driver by id.
+  - 200:
+    ```json
+    {
+      "success": true,
+      "message": "driver_details",
+      "data": { "id": "...", "user_id": "...", "school_id": "...", "code": "PH-DRV-0001", "name": "John Driver", "phone": "+234..." }
+    }
+    ```
+
+- PATCH `/schools/drivers/:driverId`
+  - Description: Update `name`, `phone`.
+  - Body (any subset):
+    ```json
+    { "phone": "+234111222333" }
+    ```
+  - 200:
+    ```json
+    { "success": true, "message": "driver_updated" }
+    ```
+
+- DELETE `/schools/drivers/:driverId`
+  - Description: Soft delete a driver.
+  - 200:
+    ```json
+    { "success": true, "message": "driver_deleted" }
+    ```
 
 ## Development
 - Dev server: `npm run dev`

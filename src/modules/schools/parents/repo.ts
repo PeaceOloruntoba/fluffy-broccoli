@@ -21,8 +21,11 @@ export async function listParentsBySchool(schoolId: string, filter?: 'all' | 've
     where += ` AND p.verified = false`;
   }
   const { rows } = await db.query(
-    `SELECT p.id, p.user_id, p.school_id, p.parent_code, p.fullname, p.phone_number, p.nin, p.relationship, p.address, p.latitude, p.longitude, p.verified, p.created_at, p.updated_at, p.deleted_at
+    `SELECT 
+       p.id, p.user_id, p.school_id, p.parent_code, p.fullname, p.phone_number, p.nin, p.relationship, p.address, p.latitude, p.longitude, p.verified, p.created_at, p.updated_at, p.deleted_at,
+       u.name AS user_name, u.username AS user_username, u.email AS user_email, u.email_verified AS user_email_verified
      FROM parents p
+     JOIN users u ON u.id = p.user_id
      WHERE ${where}
      ORDER BY p.created_at DESC`,
     params

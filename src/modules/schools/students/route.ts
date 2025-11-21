@@ -9,6 +9,7 @@ const router = Router();
 router.post('/', requireAuth(['admin']), ctrl.createStudent);
 router.post('/bulk', requireAuth(['admin']), upload.single('file'), ctrl.bulkCreateStudents);
 router.get('/', requireAuth(['admin']), ctrl.listStudents);
+router.get('/:studentId', requireAuth(['admin']), ctrl.getStudentById);
 router.patch('/:studentId', requireAuth(['admin']), ctrl.editStudent);
 router.delete('/:studentId', requireAuth(['admin']), ctrl.deleteStudent);
 
