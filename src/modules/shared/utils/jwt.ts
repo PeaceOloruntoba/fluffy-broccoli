@@ -6,7 +6,7 @@ type AccessPayload = { sub: string; role: string } & Record<string, unknown>;
 export function signAccessToken(payload: AccessPayload): Promise<string> {
   try {
     const token = jwt.sign(payload, env.JWT_ACCESS_SECRET, {
-      expiresIn: env.JWT_ACCESS_EXPIRES,
+      expiresIn: env.JWT_ACCESS_EXPIRES as unknown as jwt.SignOptions['expiresIn'],
       algorithm: 'HS256'
     });
     return Promise.resolve(token);
