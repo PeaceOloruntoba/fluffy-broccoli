@@ -12,6 +12,26 @@ export async function createStudent(schoolId: string, input: CreateStudentReques
   });
 }
 
+export async function unassignStudentsFromBus(schoolId: string, studentIds: string[]): Promise<number> {
+  return repo.deleteStudentBusesBulk(schoolId, studentIds);
+}
+
+export async function unassignStudentsFromClass(schoolId: string, studentIds: string[]): Promise<{ unlinked: number; cleared: number }> {
+  const client = await db.connect();
+  try {
+    await client.query('BEGIN');
+    const unlinked = await repo.deleteStudentClassesBulk(schoolId, studentIds);
+    const cleared = await repo.clearStudentsClassBulk(schoolId, studentIds);
+    await client.query('COMMIT');
+    return { unlinked, cleared };
+  } catch (e) {
+    await client.query('ROLLBACK');
+    throw e;
+  } finally {
+    client.release();
+  }
+}
+
 export async function bulkCreateStudents(schoolId: string, rows: Array<{ name: string; reg_no?: string | null; class_id?: string | null; parent_id?: string | null }>): Promise<number> {
   const payload = rows.map(r => ({
     school_id: schoolId,

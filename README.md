@@ -453,6 +453,93 @@ Note: Teachers are users. If the school creates them here, the teacher profile i
     { "success": true, "message": "teacher_verified" }
     ```
 
+## Relationships and Enriched Details
+
+### Enriched detail responses
+
+- GET `/schools/buses/:busId`
+  - Returns bus with driver and students on the bus.
+  - Example:
+    ```json
+    {
+      "success": true,
+      "message": "bus_details",
+      "data": {
+        "id": "...",
+        "school_id": "...",
+        "name": "Bus A",
+        "plate_number": "AAA-123",
+        "code": "PH-BUS-1234",
+        "created_at": "...",
+        "updated_at": "...",
+        "driver": { "id": "...", "user_id": "...", "code": "PH-DRV-0001", "name": "John Driver", "phone": "+234..." },
+        "students": [ { "id": "...", "name": "John Doe", "reg_no": "STU-001", "class_id": "...", "parent_id": "..." } ]
+      }
+    }
+    ```
+
+- GET `/schools/drivers/:driverId`
+  - Returns driver with assigned bus and students on that bus.
+  - Example:
+    ```json
+    {
+      "success": true,
+      "message": "driver_details",
+      "data": {
+        "id": "...",
+        "user_id": "...",
+        "school_id": "...",
+        "code": "PH-DRV-0001",
+        "name": "John Driver",
+        "phone": "+234...",
+        "bus": { "id": "...", "name": "Bus A", "plate_number": "AAA-123", "code": "PH-BUS-1234" },
+        "students": [ { "id": "...", "name": "John Doe", "reg_no": "STU-001", "class_id": "...", "parent_id": "..." } ]
+      }
+    }
+    ```
+
+- GET `/schools/teachers/:teacherId`
+  - Returns teacher with their class and students in that class.
+  - Example:
+    ```json
+    {
+      "success": true,
+      "message": "teacher_details",
+      "data": {
+        "id": "...",
+        "user_id": "...",
+        "school_id": "...",
+        "teacher_code": "PH-TE-JT-0001",
+        "name": "Jane Teacher",
+        "gender": "female",
+        "phone": "+234...",
+        "verified": true,
+        "class": { "id": "...", "name": "JS1", "code": "JS1-A" },
+        "students": [ { "id": "...", "name": "John Doe", "reg_no": "STU-001", "class_id": "...", "parent_id": "..." } ]
+      }
+    }
+    ```
+
+### Relationship endpoints
+
+All endpoints require Authorization: Bearer <admin-jwt> and are scoped to the authenticated school.
+
+- Assign/unassign driver ⇄ bus
+  - POST `/schools/drivers/:driverId/bus` → `{ "bus_id": "<uuid>" }`
+  - DELETE `/schools/drivers/:driverId/bus`
+
+- Assign/unassign teacher ⇄ class
+  - POST `/schools/teachers/:teacherId/class` → `{ "class_id": "<uuid>" }`
+  - DELETE `/schools/teachers/:teacherId/class`
+
+- Assign/unassign students ⇒ bus (bulk)
+  - POST `/schools/students/assign/bus` → `{ "bus_id": "<uuid>", "student_ids": ["<uuid>","<uuid>"] }`
+  - POST `/schools/students/unassign/bus` → `{ "student_ids": ["<uuid>","<uuid>"] }`
+
+- Assign/unassign students ⇒ class (bulk)
+  - POST `/schools/students/assign/class` → `{ "class_id": "<uuid>", "student_ids": ["<uuid>","<uuid>"] }`
+  - POST `/schools/students/unassign/class` → `{ "student_ids": ["<uuid>","<uuid>"] }`
+
 ## Development
 - Dev server: `npm run dev`
 - Migrations: `npm run migrate`

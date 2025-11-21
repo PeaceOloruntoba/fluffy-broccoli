@@ -116,6 +116,40 @@ export async function updateStudentsClassBulk(schoolId: string, classId: string,
   return result.rowCount ?? 0;
 }
 
+export async function deleteStudentBusesBulk(schoolId: string, studentIds: string[]): Promise<number> {
+  if (studentIds.length === 0) return 0;
+  const params: any[] = [schoolId];
+  const inParams: string[] = [];
+  let i = 2;
+  for (const sid of studentIds) { inParams.push(`$${i++}`); params.push(sid); }
+  const sql = `DELETE FROM student_buses WHERE school_id = $1 AND student_id IN (${inParams.join(',')})`;
+  const result = await db.query(sql, params);
+  return result.rowCount ?? 0;
+}
+
+export async function deleteStudentClassesBulk(schoolId: string, studentIds: string[]): Promise<number> {
+  if (studentIds.length === 0) return 0;
+  const params: any[] = [schoolId];
+  const inParams: string[] = [];
+  let i = 2;
+  for (const sid of studentIds) { inParams.push(`$${i++}`); params.push(sid); }
+  const sql = `DELETE FROM student_classes WHERE school_id = $1 AND student_id IN (${inParams.join(',')})`;
+  const result = await db.query(sql, params);
+  return result.rowCount ?? 0;
+}
+
+export async function clearStudentsClassBulk(schoolId: string, studentIds: string[]): Promise<number> {
+  if (studentIds.length === 0) return 0;
+  const params: any[] = [schoolId];
+  const inParams: string[] = [];
+  let i = 2;
+  for (const sid of studentIds) { inParams.push(`$${i++}`); params.push(sid); }
+  const sql = `UPDATE students SET class_id = NULL, updated_at = now()
+               WHERE school_id = $1 AND id IN (${inParams.join(',')}) AND deleted_at IS NULL`;
+  const result = await db.query(sql, params);
+  return result.rowCount ?? 0;
+}
+
 export async function getStudentByIdWithParent(id: string, schoolId: string): Promise<any | null> {
   const { rows } = await db.query(
     `SELECT 

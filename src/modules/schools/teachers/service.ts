@@ -54,7 +54,7 @@ export async function listTeachers(schoolId: string) {
 }
 
 export async function getTeacher(teacherId: string, schoolId: string) {
-  return repo.getTeacherById(teacherId, schoolId);
+  return repo.getTeacherWithClassAndStudents(teacherId, schoolId);
 }
 
 export async function updateTeacher(teacherId: string, schoolId: string, input: UpdateTeacherRequest) {

@@ -36,7 +36,7 @@ export async function listBuses(schoolId: string): Promise<Bus[]> {
 }
 
 export async function getBus(busId: string, schoolId: string): Promise<Bus | null> {
-  return repo.getBusById(busId, schoolId);
+  return repo.getBusWithDriverAndStudents(busId, schoolId) as any;
 }
 
 export async function updateBus(busId: string, schoolId: string, input: UpdateBusRequest): Promise<boolean> {

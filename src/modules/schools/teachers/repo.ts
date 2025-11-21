@@ -68,3 +68,29 @@ export async function deleteTeacherClass(schoolId: string, teacherId: string): P
     [schoolId, teacherId]
   );
 }
+
+export async function getTeacherWithClassAndStudents(teacherId: string, schoolId: string): Promise<any | null> {
+  const { rows } = await db.query(
+    `WITH t AS (
+       SELECT id, user_id, school_id, teacher_code, name, nin, gender, dob, nationality, state_of_origin, phone, passport_photo_url, verified, created_at, updated_at
+       FROM teachers WHERE id = $1 AND school_id = $2 AND deleted_at IS NULL
+     ),
+     link AS (
+       SELECT tc.class_id FROM teacher_classes tc JOIN t ON tc.teacher_id = t.id WHERE tc.school_id = $2
+     ),
+     cls AS (
+       SELECT c.id, c.name, c.code FROM classes c WHERE c.id = (SELECT class_id FROM link LIMIT 1)
+     ),
+     studs AS (
+       SELECT s.id, s.name, s.reg_no, s.class_id, s.parent_user_id AS parent_id
+       FROM students s WHERE s.class_id = (SELECT class_id FROM link LIMIT 1) AND s.school_id = $2 AND s.deleted_at IS NULL
+     )
+     SELECT (SELECT row_to_json(t) FROM t) AS teacher,
+            (SELECT row_to_json(cls) FROM cls) AS class,
+            (SELECT coalesce(json_agg(studs), '[]'::json) FROM studs) AS students;`,
+    [teacherId, schoolId]
+  );
+  const r = rows[0];
+  if (!r?.teacher) return null;
+  return { ...r.teacher, class: r.class ?? null, students: r.students ?? [] };
+}

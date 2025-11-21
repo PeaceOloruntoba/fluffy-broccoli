@@ -177,3 +177,33 @@ export async function assignStudentsToClass(req: Request, res: Response) {
     return sendError(res, e instanceof Error ? e.message : 'assign_students_class_failed', 400);
   }
 }
+
+export async function unassignStudentsFromBus(req: Request, res: Response) {
+  const parsed = assignStudentsSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ success: false, message: 'validation_error', errors: parsed.error.flatten() });
+  try {
+    const user = (req as any).auth;
+    if (!user) return sendError(res, 'unauthorized', 401);
+    const school = await getSchoolByUserId(user.sub);
+    if (!school) return sendError(res, 'school_not_found', 400);
+    const count = await service.unassignStudentsFromBus(school.id, parsed.data.student_ids);
+    return sendSuccess(res, { unassigned: count }, 'students_unassigned_from_bus');
+  } catch (e) {
+    return sendError(res, e instanceof Error ? e.message : 'unassign_students_bus_failed', 400);
+  }
+}
+
+export async function unassignStudentsFromClass(req: Request, res: Response) {
+  const parsed = assignStudentsSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ success: false, message: 'validation_error', errors: parsed.error.flatten() });
+  try {
+    const user = (req as any).auth;
+    if (!user) return sendError(res, 'unauthorized', 401);
+    const school = await getSchoolByUserId(user.sub);
+    if (!school) return sendError(res, 'school_not_found', 400);
+    const result = await service.unassignStudentsFromClass(school.id, parsed.data.student_ids);
+    return sendSuccess(res, result, 'students_unassigned_from_class');
+  } catch (e) {
+    return sendError(res, e instanceof Error ? e.message : 'unassign_students_class_failed', 400);
+  }
+}

@@ -16,5 +16,7 @@ router.delete('/:studentId', requireAuth(['admin']), ctrl.deleteStudent);
 // Relationships (bulk)
 router.post('/assign/bus', requireAuth(['admin']), ctrl.assignStudentsToBus);
 router.post('/assign/class', requireAuth(['admin']), ctrl.assignStudentsToClass);
+router.post('/unassign/bus', requireAuth(['admin']), ctrl.unassignStudentsFromBus);
+router.post('/unassign/class', requireAuth(['admin']), ctrl.unassignStudentsFromClass);
 
 export default router;
