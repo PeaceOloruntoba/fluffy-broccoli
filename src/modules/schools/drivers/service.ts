@@ -20,7 +20,10 @@ export async function createDriver(schoolId: string, schoolUserId: string, input
       if (ok) { code = c; break; }
     }
     if (!code) throw new Error('could_not_allocate_code');
-    await insertDriverTx(client, { user_id: user.id, school_id: schoolId, driver_code: code });
+    await insertDriverTx(client, { user_id: user.id, school_id: schoolId, driver_code: code, name: input.name, phone: input.phone ?? null });
+    // mark driver user email verified and persist phone/name on users; mark driver profile verified
+    await client.query(`UPDATE users SET email_verified = true, phone = COALESCE($2, phone), name = COALESCE($3, name), updated_at = now() WHERE id = $1`, [user.id, input.phone ?? null, input.name ?? null]);
+    await client.query(`UPDATE drivers SET verified = true, updated_at = now() WHERE user_id = $1`, [user.id]);
     await client.query('COMMIT');
     return { id: user.id, email: user.email, code, user_id: user.id, school_id: schoolId, name: input.name, phone: input.phone ?? null, created_at: '', updated_at: '', deleted_at: null } as any;
   } catch (e) {

@@ -361,6 +361,98 @@ Note: Drivers are users but do not log in. Creating a driver creates a `users` r
     { "success": true, "message": "driver_deleted" }
     ```
 
+## Teachers (School admin)
+Base: `/schools/teachers` (requires Authorization: Bearer <admin-jwt>)
+
+Note: Teachers are users. If the school creates them here, the teacher profile is marked `verified` and the user `email_verified = true` automatically. If teachers self-sign up via `/auth/signup/teacher`, they follow the usual OTP verification flow and are not auto-verified.
+
+- POST `/schools/teachers`
+  - Description: Create a teacher (user + teacher profile) with a unique code like `PH-TE-JD-0001`. Auto-verifies profile and email.
+  - Body:
+    ```json
+    {
+      "name": "Jane Teacher",
+      "email": "jt@example.com",
+      "password": "secret123",
+      "gender": "female",
+      "nin": "12345678901",
+      "dob": "1990-06-01",
+      "nationality": "NG",
+      "state_of_origin": "Lagos",
+      "phone": "+2348012345678"
+    }
+    ```
+  - 201:
+    ```json
+    {
+      "success": true,
+      "message": "teacher_created",
+      "data": {
+        "id": "<user-id>",
+        "email": "jt@example.com",
+        "teacher_code": "PH-TE-JT-0001",
+        "user_id": "<user-id>",
+        "school_id": "...",
+        "name": "Jane Teacher",
+        "nin": "12345678901",
+        "gender": "female",
+        "dob": "1990-06-01",
+        "nationality": "NG",
+        "state_of_origin": "Lagos",
+        "phone": "+2348012345678",
+        "passport_photo_url": null,
+        "verified": true
+      }
+    }
+    ```
+
+- GET `/schools/teachers`
+  - Description: List teachers for the authenticated admin's school.
+  - 200:
+    ```json
+    {
+      "success": true,
+      "message": "teachers_list",
+      "data": [ { "id": "...", "user_id": "...", "school_id": "...", "teacher_code": "PH-TE-JT-0001", "name": "Jane Teacher", "gender": "female", "phone": "+234...", "verified": true } ]
+    }
+    ```
+
+- GET `/schools/teachers/:teacherId`
+  - Description: Get a single teacher by id.
+  - 200:
+    ```json
+    {
+      "success": true,
+      "message": "teacher_details",
+      "data": { "id": "...", "user_id": "...", "school_id": "...", "teacher_code": "PH-TE-JT-0001", "name": "Jane Teacher", "gender": "female", "phone": "+234...", "verified": true }
+    }
+    ```
+
+- PATCH `/schools/teachers/:teacherId`
+  - Description: Update teacher fields (`name`, `nin`, `gender`, `dob`, `nationality`, `state_of_origin`, `phone`).
+  - Body (any subset):
+    ```json
+    { "phone": "+234111222333" }
+    ```
+  - 200:
+    ```json
+    { "success": true, "message": "teacher_updated" }
+    ```
+
+- DELETE `/schools/teachers/:teacherId`
+  - Description: Soft delete a teacher.
+  - 200:
+    ```json
+    { "success": true, "message": "teacher_deleted" }
+    ```
+
+- POST `/schools/teachers/:teacherId/verify`
+  - Description: Verify a teacher profile (for teachers who signed up and verified email via OTP). School admin only, scoped to own school.
+  - 200:
+    ```json
+    { "success": true, "message": "teacher_verified" }
+    ```
+
 ## Development
 - Dev server: `npm run dev`
 - Migrations: `npm run migrate`
