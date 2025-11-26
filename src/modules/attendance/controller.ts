@@ -11,6 +11,7 @@ const entrySchema = z.object({
 });
 
 export async function postSchoolAttendance(req: Request, res: Response) {
+  console.log(req.body)
   const parsed = z.object({ entries: z.array(entrySchema).min(1), school_id: z.string().uuid().optional().nullable() }).safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ success: false, message: 'validation_error', errors: parsed.error.flatten() });
   try {
@@ -19,11 +20,13 @@ export async function postSchoolAttendance(req: Request, res: Response) {
     const result = await recordSchoolAttendance({ role: auth.role, user_id: auth.sub, entries: parsed.data.entries, school_id: parsed.data.school_id ?? null });
     return sendSuccess(res, result, 'school_attendance_recorded', 201);
   } catch (e) {
+    console.log(e)
     return sendError(res, e instanceof Error ? e.message : 'record_school_attendance_failed', 400);
   }
 }
 
 export async function postBusAttendance(req: Request, res: Response) {
+  console.log(req.body)
   const parsed = z.object({ entries: z.array(entrySchema).min(1), school_id: z.string().uuid().optional().nullable(), bus_id: z.string().uuid().optional().nullable() }).safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ success: false, message: 'validation_error', errors: parsed.error.flatten() });
   try {
@@ -32,6 +35,7 @@ export async function postBusAttendance(req: Request, res: Response) {
     const result = await recordBusAttendance({ role: auth.role, user_id: auth.sub, entries: parsed.data.entries, school_id: parsed.data.school_id ?? null, bus_id: parsed.data.bus_id ?? null });
     return sendSuccess(res, result, 'bus_attendance_recorded', 201);
   } catch (e) {
+    console.log(e)
     return sendError(res, e instanceof Error ? e.message : 'record_bus_attendance_failed', 400);
   }
 }

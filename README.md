@@ -615,6 +615,78 @@ Base: `/attendance` (requires Authorization: Bearer <jwt>)
 - Parent role has read-only access; cannot write attendance.
 - All endpoints enforce school scoping and role constraints at query level.
 
+### Per-role access
+
+Below summarizes what each role can do and the exact endpoints they should call.
+
+#### Superadmin
+- Write school attendance
+  - POST `/attendance/school`
+  - Body:
+    ```json
+    {
+      "school_id": "<uuid>",
+      "entries": [ { "student_id": "<uuid>", "status": "present", "date": "YYYY-MM-DD", "note": "" } ]
+    }
+    ```
+- Write bus attendance
+  - POST `/attendance/bus`
+  - Body:
+    ```json
+    {
+      "school_id": "<uuid>",
+      "bus_id": "<uuid>",
+      "entries": [ { "student_id": "<uuid>", "status": "present", "date": "YYYY-MM-DD", "note": "" } ]
+    }
+    ```
+- Read
+  - GET `/attendance/school?school_id=<uuid>&date=YYYY-MM-DD&class_id=<uuid>&student_id=<uuid>`
+  - GET `/attendance/bus?school_id=<uuid>&bus_id=<uuid>&date=YYYY-MM-DD&student_id=<uuid>`
+
+#### Admin (School)
+- Write school attendance
+  - POST `/attendance/school`
+  - Body (school auto-scoped):
+    ```json
+    { "entries": [ { "student_id": "<uuid>", "status": "present", "date": "YYYY-MM-DD" } ] }
+    ```
+- Write bus attendance
+  - POST `/attendance/bus`
+  - Body (school auto-scoped; `bus_id` optional):
+    ```json
+    { "bus_id": "<uuid>", "entries": [ { "student_id": "<uuid>", "status": "absent", "date": "YYYY-MM-DD" } ] }
+    ```
+- Read
+  - GET `/attendance/school?date=YYYY-MM-DD&class_id=<uuid>&student_id=<uuid>`
+  - GET `/attendance/bus?date=YYYY-MM-DD&bus_id=<uuid>&student_id=<uuid>`
+
+#### Teacher
+- Write school attendance (only for their assigned class)
+  - POST `/attendance/school`
+  - Body:
+    ```json
+    { "entries": [ { "student_id": "<uuid>", "status": "late", "date": "YYYY-MM-DD" } ] }
+    ```
+- Read (scoped to their class)
+  - GET `/attendance/school?date=YYYY-MM-DD&student_id=<uuid>`
+  - GET `/attendance/bus?date=YYYY-MM-DD&student_id=<uuid>`
+
+#### Driver
+- Write bus attendance (only for their assigned bus)
+  - POST `/attendance/bus`
+  - Body:
+    ```json
+    { "entries": [ { "student_id": "<uuid>", "status": "present", "date": "YYYY-MM-DD" } ] }
+    ```
+- Read (scoped to their bus)
+  - GET `/attendance/bus?date=YYYY-MM-DD&student_id=<uuid>`
+  - GET `/attendance/school?date=YYYY-MM-DD&student_id=<uuid>`
+
+#### Parent
+- Read only (their child/children)
+  - GET `/attendance/school?date=YYYY-MM-DD&student_id=<uuid>`
+  - GET `/attendance/bus?date=YYYY-MM-DD&student_id=<uuid>`
+
 ## Development
 - Dev server: `npm run dev`
 - Migrations: `npm run migrate`

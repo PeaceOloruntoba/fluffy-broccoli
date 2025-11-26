@@ -97,10 +97,28 @@ export async function listSchoolAttendance(params: { role: string; user_id: stri
   if (params.student_id) where.push(`a.student_id = $${values.push(params.student_id)}`);
 
   const sql = `
-    SELECT a.id, a.school_id, a.student_id, a.class_id, a.status, a.note, a.attendance_date, a.taken_at, a.taken_by_user_id, a.taken_by_role
+    SELECT 
+      a.id,
+      a.school_id,
+      a.student_id,
+      a.class_id,
+      a.status,
+      a.note,
+      a.attendance_date,
+      a.taken_at,
+      a.taken_by_user_id,
+      a.taken_by_role,
+      s.parent_user_id AS parent_id,
+      s.class_id AS student_class_id,
+      s.name AS student_name,
+      sb.bus_id AS bus_id,
+      b.name AS bus_name,
+      c.name AS class_name
     FROM school_attendance a
     JOIN students s ON s.id = a.student_id
     LEFT JOIN student_buses sb ON sb.student_id = s.id AND sb.school_id = a.school_id
+    LEFT JOIN buses b ON b.id = sb.bus_id
+    LEFT JOIN classes c ON c.id = a.class_id
     LEFT JOIN users u ON u.id = s.parent_user_id
     ${where.length ? 'WHERE ' + where.join(' AND ') : ''}
     ORDER BY a.attendance_date DESC, a.taken_at DESC
@@ -139,9 +157,26 @@ export async function listBusAttendance(params: { role: string; user_id: string;
   if (params.student_id) where.push(`a.student_id = $${values.push(params.student_id)}`);
 
   const sql = `
-    SELECT a.id, a.school_id, a.student_id, a.bus_id, a.status, a.note, a.attendance_date, a.taken_at, a.taken_by_user_id, a.taken_by_role
+    SELECT 
+      a.id,
+      a.school_id,
+      a.student_id,
+      a.bus_id,
+      a.status,
+      a.note,
+      a.attendance_date,
+      a.taken_at,
+      a.taken_by_user_id,
+      a.taken_by_role,
+      s.parent_user_id AS parent_id,
+      s.class_id AS class_id,
+      s.name AS student_name,
+      b.name AS bus_name,
+      c.name AS class_name
     FROM bus_attendance a
     JOIN students s ON s.id = a.student_id
+    LEFT JOIN buses b ON b.id = a.bus_id
+    LEFT JOIN classes c ON c.id = s.class_id
     LEFT JOIN users u ON u.id = s.parent_user_id
     ${where.length ? 'WHERE ' + where.join(' AND ') : ''}
     ORDER BY a.attendance_date DESC, a.taken_at DESC
@@ -167,12 +202,18 @@ export async function upsertSchoolAttendance(schoolId: string, takenByUserId: st
       VALUES ${rowsSql.join(',')}
     ),
     resolved AS (
-      SELECT v.student_id, v.school_id, v.attendance_date, v.status, v.note, v.taken_by_user_id, s.class_id
+      SELECT (v.student_id)::uuid AS student_id,
+             (v.school_id)::uuid AS school_id,
+             v.attendance_date,
+             v.status,
+             v.note,
+             (v.taken_by_user_id)::uuid AS taken_by_user_id,
+             s.class_id
       FROM v
-      JOIN students s ON s.id = v.student_id AND s.school_id = v.school_id
+      JOIN students s ON s.id = (v.student_id)::uuid AND s.school_id = (v.school_id)::uuid
     )
     INSERT INTO school_attendance (student_id, school_id, class_id, attendance_date, status, note, taken_by_user_id, taken_by_role)
-    SELECT r.student_id, r.school_id, r.class_id, r.attendance_date, r.status, r.note, r.taken_by_user_id, $${values.push(takenByRole)}
+    SELECT r.student_id, r.school_id, r.class_id, r.attendance_date, (r.status)::attendance_status, r.note, r.taken_by_user_id, $${values.push(takenByRole)}::user_role
     FROM resolved r
     ON CONFLICT (student_id, attendance_date)
     DO UPDATE SET status = EXCLUDED.status, note = EXCLUDED.note, class_id = EXCLUDED.class_id, taken_by_user_id = EXCLUDED.taken_by_user_id, taken_by_role = EXCLUDED.taken_by_role, updated_at = now()
@@ -199,13 +240,18 @@ export async function upsertBusAttendance(schoolId: string, takenByUserId: strin
       VALUES ${rowsSql.join(',')}
     ),
     resolved AS (
-      SELECT v.student_id, v.school_id, v.attendance_date, v.status, v.note, v.taken_by_user_id,
-             COALESCE(sb.bus_id, $${values.push(driverBusId ?? null)}) AS bus_id
+      SELECT (v.student_id)::uuid AS student_id,
+             (v.school_id)::uuid AS school_id,
+             v.attendance_date,
+             v.status,
+             v.note,
+             (v.taken_by_user_id)::uuid AS taken_by_user_id,
+             COALESCE(sb.bus_id, $${values.push(driverBusId ?? null)}::uuid) AS bus_id
       FROM v
-      LEFT JOIN student_buses sb ON sb.student_id = v.student_id AND sb.school_id = v.school_id
+      LEFT JOIN student_buses sb ON sb.student_id = (v.student_id)::uuid AND sb.school_id = (v.school_id)::uuid
     )
     INSERT INTO bus_attendance (student_id, school_id, bus_id, attendance_date, status, note, taken_by_user_id, taken_by_role)
-    SELECT r.student_id, r.school_id, r.bus_id, r.attendance_date, r.status, r.note, r.taken_by_user_id, $${values.push(takenByRole)}
+    SELECT r.student_id, r.school_id, r.bus_id, r.attendance_date, (r.status)::attendance_status, r.note, r.taken_by_user_id, $${values.push(takenByRole)}::user_role
     FROM resolved r
     ON CONFLICT (student_id, attendance_date)
     DO UPDATE SET status = EXCLUDED.status, note = EXCLUDED.note, bus_id = EXCLUDED.bus_id, taken_by_user_id = EXCLUDED.taken_by_user_id, taken_by_role = EXCLUDED.taken_by_role, updated_at = now()
