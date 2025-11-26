@@ -7,6 +7,7 @@ import { sendEmail } from '../shared/services/email.js';
 import type { LoginRequest, LoginResponse } from './type.js';
 import { consumeOtp, createUserTx, deleteOtpsForEmailPurpose, findUserByEmailOrUsername, findValidOtp, getSchoolById, getSchoolByUserId, getParentByUserId, getTeacherByUserId, getUserByEmail, insertOtp, insertParentTx, insertSchoolTx, insertTeacherTx, isProfileVerified, reserveUniqueCodeTx, setUserEmailVerifiedByEmail, updateLastLogin, updateUserPassword, insertRefreshToken, findRefreshToken, revokeRefreshToken, revokeAllUserRefreshTokens } from './repo.js';
 import { db } from '../shared/config/db.js';
+import * as notifications from '../notifications/service.js';
 import type { SignupParentRequest, SignupSchoolRequest, SignupTeacherRequest } from './type.js';
 import { uploadBuffer } from '../shared/services/cloudinary.js';
 import { generatePersonCode, generateSchoolCode } from '../shared/utils/code.js';
@@ -67,11 +68,48 @@ async function getRoleOfUser(userId: string): Promise<string> {
 }
 
 export async function logout(refreshToken: string): Promise<void> {
+  // find token owner first to notify
+  const stored = await findRefreshToken(refreshToken);
   await revokeRefreshToken(refreshToken);
+  if (stored?.user_id) {
+    const { rows } = await db.query(`SELECT id, email FROM users WHERE id = $1`, [stored.user_id]);
+    const user = rows[0];
+    const tokens = await notifications.registerDevice(user.id, '', 'web').catch(() => null); // no-op to ensure module is loaded
+    const pushTokens = await (async () => {
+      try { return await (await import('../notifications/repo.js')).listDeviceTokensByUser(user.id); } catch { return []; }
+    })();
+    await notifications.notify({
+      user_id: user.id,
+      title: 'Session ended',
+      body: 'You have been logged out on one device.',
+      type: 'session.revoked',
+      category: 'security',
+      channels: { inapp: true, push: true, email: true, sms: false },
+      email: user.email,
+      pushTokens
+    });
+  }
 }
 
 export async function logoutAll(userId: string): Promise<void> {
   await revokeAllUserRefreshTokens(userId);
+  const { rows } = await db.query(`SELECT id, email FROM users WHERE id = $1`, [userId]);
+  const user = rows[0];
+  if (user) {
+    const pushTokens = await (async () => {
+      try { return await (await import('../notifications/repo.js')).listDeviceTokensByUser(user.id); } catch { return []; }
+    })();
+    await notifications.notify({
+      user_id: user.id,
+      title: 'All sessions ended',
+      body: 'You have been logged out from all devices.',
+      type: 'session.revoked_all',
+      category: 'security',
+      channels: { inapp: true, push: true, email: true, sms: false },
+      email: user.email,
+      pushTokens
+    });
+  }
 }
 
 export async function sendForgotPassword(email: string): Promise<void> {

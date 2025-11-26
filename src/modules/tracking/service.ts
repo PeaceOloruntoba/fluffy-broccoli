@@ -1,5 +1,7 @@
-import { getDriverScopeByUser, getAdminSchoolId, createTripWithTargets, insertLocations, patchTargetStatus, setTripEnded, findRunningTripForBus, getLiveForSchool, getLiveForParent, getSchoolCoords, getTripTargetsForOrdering, bulkUpdateTargetOrder, type TripDirection } from './repo.js';
+import { getDriverScopeByUser, getAdminSchoolId, createTripWithTargets, insertLocations, patchTargetStatus, setTripEnded, findRunningTripForBus, getLiveForSchool, getLiveForParent, getSchoolCoords, getTripTargetsForOrdering, bulkUpdateTargetOrder, type TripDirection, getDriverUserIdByDriverId, getAdminUserIdBySchool, listTeacherUserIdsBySchool, getParentForTarget } from './repo.js';
 import { handleLocationPingForReminders } from '../notifications/service.js';
+import { db } from '../shared/config/db.js';
+import * as notifications from '../notifications/service.js';
 
 export async function startTrip(params: { user_id: string; role: string; direction: TripDirection; route_name?: string }) {
   if (params.role !== 'driver') throw new Error('forbidden');
@@ -50,6 +52,21 @@ export async function startTrip(params: { user_id: string; role: string; directi
   }
   const toPersist = ordered.map((t, idx) => ({ id: t.id, order_index: idx + 1 }));
   await bulkUpdateTargetOrder(trip_id, toPersist);
+  // Notify driver, admin, and teachers (in-app only)
+  const driverUserId = await getDriverUserIdByDriverId(scope.driver_id);
+  const adminUserId = await getAdminUserIdBySchool(scope.school_id);
+  const teacherUserIds = await listTeacherUserIdsBySchool(scope.school_id);
+  const title = params.direction === 'pickup' ? 'Trip started (Pickup)' : 'Trip started (Dropoff)';
+  const body = `Trip started for bus ${scope.bus_id}`;
+  const send = async (userId?: string | null) => {
+    if (!userId) return;
+    await notifications.notify({ user_id: userId, title, body, type: 'trip.start', category: 'trip', channels: { inapp: true, push: false, email: false, sms: false } });
+  };
+  await Promise.all([
+    send(driverUserId),
+    send(adminUserId),
+    ...teacherUserIds.map(uid => send(uid))
+  ]);
   return { trip_id, targets: ordered.map((t, idx) => ({ target_id: t.id, student_id: t.student_id, name: t.name, lat: t.lat, lng: t.lng, order_index: idx + 1 })) };
 }
 
@@ -66,12 +83,40 @@ export async function updateTargetStatus(params: { user_id: string; role: string
   if (params.role !== 'driver') throw new Error('forbidden');
   const ok = await patchTargetStatus({ trip_id: params.trip_id, target_id: params.target_id, status: params.status });
   if (!ok) throw new Error('target_not_found');
+  // Notify parent (picked/dropped) and school staff in-app
+  const rel = await getParentForTarget(params.trip_id, params.target_id);
+  const kindTitle: Record<string,string> = { picked: 'Student picked up', dropped: 'Student dropped off', skipped: 'Stop skipped' };
+  const title = kindTitle[params.status] ?? 'Target updated';
+  const body = rel?.student_name ? `${rel.student_name}: ${title.toLowerCase()}` : title;
+  const channels = { inapp: true, push: false, email: false, sms: false } as const;
+  if (rel?.parent_user_id && (params.status === 'picked' || params.status === 'dropped')) {
+    await notifications.notify({ user_id: rel.parent_user_id, title, body, type: `trip.${params.status}`, category: 'trip', channels });
+  }
+  if (rel?.school_id) {
+    const adminUserId = await getAdminUserIdBySchool(rel.school_id);
+    const teacherUserIds = await listTeacherUserIdsBySchool(rel.school_id);
+    const send = async (userId?: string | null) => { if (!userId) return; await notifications.notify({ user_id: userId, title, body, type: `trip.${params.status}`, category: 'trip', channels }); };
+    await Promise.all([ send(adminUserId), ...teacherUserIds.map(uid => send(uid)) ]);
+  }
   return { updated: true };
 }
 
 export async function endTrip(params: { user_id: string; role: string; trip_id: string }) {
   if (params.role !== 'driver' && params.role !== 'admin' && params.role !== 'superadmin') throw new Error('forbidden');
   await setTripEnded({ trip_id: params.trip_id, ended_by_user_id: params.user_id });
+  // Notify staff and driver in-app
+  // Resolve school and driver for the trip
+  const { rows } = await db.query(`SELECT school_id, driver_id, bus_id FROM trips WHERE id = $1`, [params.trip_id]);
+  const trip = rows[0];
+  if (trip) {
+    const driverUserId = await getDriverUserIdByDriverId(trip.driver_id);
+    const adminUserId = await getAdminUserIdBySchool(trip.school_id);
+    const teacherUserIds = await listTeacherUserIdsBySchool(trip.school_id);
+    const title = 'Trip ended';
+    const body = `Trip ended for bus ${trip.bus_id}`;
+    const send = async (userId?: string | null) => { if (!userId) return; await notifications.notify({ user_id: userId, title, body, type: 'trip.end', category: 'trip', channels: { inapp: true, push: false, email: false, sms: false } }); };
+    await Promise.all([ send(driverUserId), send(adminUserId), ...teacherUserIds.map(uid => send(uid)) ]);
+  }
   return { ended: true };
 }
 

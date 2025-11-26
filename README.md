@@ -1,10 +1,152 @@
 # MySchoolBus API
 
 Backend: Node.js + Express + TypeScript + PostgreSQL
-
 Base URL: http://localhost:4000/api/v1
 
-## Environment
+# Auth (Global)
+Base: `/auth`
+
+- Login
+  - POST `/auth/login`
+  - Body:
+    ```json
+    { "identifier":"user@example.com", "password":"secret" }
+    ```
+  - 200:
+    ```json
+    { "success": true, "message": "login_success", "data": { "token": "<jwt>", "user": { "id": "...", "email": "...", "role": "parent", "email_verified": true }, "refresh_token": "<opaque>" } }
+    ```
+- Refresh
+  - POST `/auth/refresh` or `/auth/refresh-cookie`
+  - Body (token-in-body variant): `{ "refresh_token": "<opaque>" }`
+  - 200: `{ "success": true, "message": "token_refreshed", "data": { "token": "<jwt>", "refresh_token": "<opaque>" } }`
+- Logout
+  - POST `/auth/logout` `{ "refresh_token": "<opaque>" }`
+  - POST `/auth/logout-cookie`
+- Logout all
+  - POST `/auth/logout-all` (Authorization required)
+- Password reset
+  - POST `/auth/forgot-password` `{ "email": "user@example.com" }`
+  - POST `/auth/reset-password` `{ "email": "user@example.com", "code":"123456", "newPassword":"newpass" }`
+- Email verification
+  - POST `/auth/verify-email` `{ "email": "user@example.com", "code": "123456" }`
+  - POST `/auth/resend-email-verification` `{ "email": "user@example.com" }`
+
+Sessions and tokens
+- Access: JWT (`JWT_ACCESS_EXPIRES`), Refresh: 30 days, rotated on use.
+
+# Superadmin
+- System
+  - GET `/health`
+- Tracking (View)
+  - GET `/tracking/live?school_id=<uuid>`
+- Notifications
+  - GET `/notifications`
+  - POST `/notifications/:id/read`
+  - POST `/notifications/read-all`
+  - GET/PUT `/notifications/preferences`
+
+# Admin (School)
+Modules: Tracking, Attendance, Parents, Students, Drivers/Buses, Teachers/Classes, Notifications
+
+- Tracking
+  - GET `/tracking/live`
+  - Response: array of running trips with latest location
+- Attendance
+  - School attendance
+    - POST `/attendance/school`
+      ```json
+      { "student_id":"<uuid>", "date":"2025-11-27", "status":"present" }
+      ```
+    - GET `/attendance/school?date=2025-11-27`
+  - Bus attendance
+    - POST `/attendance/bus`
+      ```json
+      { "trip_id":"<uuid>", "student_id":"<uuid>", "status":"picked" }
+      ```
+- Parents
+  - POST `/schools/parents` (create), GET `/schools/parents`, etc.
+- Students
+  - POST `/schools/students`, GET `/schools/students`
+- Drivers/Buses
+  - POST `/schools/drivers`, GET `/schools/buses`
+- Teachers/Classes
+  - POST `/schools/teachers`, GET `/classes`
+- Notifications
+  - GET `/notifications`, POST `/notifications/:id/read`, POST `/notifications/read-all`
+
+# Teachers
+Modules: Tracking (view), Attendance, Notifications
+
+- Tracking
+  - GET `/tracking/live`
+- Attendance
+  - POST `/attendance/school` (per teacher scope)
+  - GET `/attendance/school?date=...`
+- Notifications
+  - GET `/notifications`, POST `/notifications/:id/read`
+
+# Drivers
+Modules: Tracking, Notifications
+
+- Trips
+  - Start trip: POST `/tracking/trips/start`
+    ```json
+    { "direction": "pickup", "route_name": "Morning Route" }
+    ```
+    200:
+    ```json
+    { "success": true, "message": "trip_started", "data": { "trip_id": "<uuid>", "targets": [ { "target_id": "<uuid>", "student_id": "<uuid>", "order_index": 1 } ] } }
+    ```
+  - Add locations (10s interval, batching OK):
+    POST `/tracking/trips/:tripId/locations`
+    ```json
+    { "points": [ { "lat": 6.45, "lng": 3.39, "recorded_at": "2025-11-27T07:30:00Z" } ] }
+    ```
+  - Update target status:
+    PATCH `/tracking/trips/:tripId/targets/:targetId`
+    ```json
+    { "status": "picked" }
+    ```
+  - End trip: POST `/tracking/trips/:tripId/end`
+- Notifications
+  - GET `/notifications`
+
+# Parents
+Modules: Tracking (mine), Notifications, Reminders
+
+- Tracking (Mine)
+  - GET `/tracking/live/mine`
+- Notifications
+  - GET `/notifications`
+- Reminders (distance-based)
+  - GET `/notifications/reminders`
+  - PUT `/notifications/reminders`
+    ```json
+    { "student_id": "<uuid>", "school_id": "<uuid>", "enabled": true, "pickup_radius_km": 5, "dropoff_radius_km": 10 }
+    ```
+
+# Notifications (Module Details)
+Base: `/notifications`
+
+- Overview
+  - Channels: in-app, email, push (FCM), SMS (optional)
+  - Event defaults:
+    - Auth: OTP email, reset email, refresh revoked (in-app + push + email)
+    - School: creations in-app, bulk import/billing in-app + email, credentials email on user creation
+    - Tracking: drivers/admin/teachers in-app; parents in-app; reminders for parents (5km/10km)
+    - Attendance: in-app for all
+    - System health: superadmin in-app + email
+- Endpoints
+  - GET `/notifications`
+  - POST `/notifications/:id/read`
+  - POST `/notifications/read-all`
+  - GET `/notifications/preferences`
+  - PUT `/notifications/preferences`
+  - POST `/notifications/devices/register` `{ "token":"<fcm>", "platform":"android" }`
+  - POST `/notifications/devices/unregister` `{ "token":"<fcm>" }`
+
+# Environment
 
 Minimal required variables:
 

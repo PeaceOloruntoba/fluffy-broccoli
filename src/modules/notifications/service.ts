@@ -43,7 +43,50 @@ export async function upsertReminder(user_id: string, student_id: string, school
 }
 
 // Hook from tracking: evaluate reminders on location pings
-export async function handleLocationPingForReminders(_params: { trip_id: string; points: Array<{ lat: number; lng: number; recorded_at?: string | null }> }) {
-  // TODO: join trip_targets -> students -> parents -> parent_reminders, compute distance to home, fire notify when within configured radius
-  return;
+export async function handleLocationPingForReminders(params: { trip_id: string; points: Array<{ lat: number; lng: number; recorded_at?: string | null }> }) {
+  if (!params.points?.length) return;
+  const reminders = await repo.getRemindersForTrip(params.trip_id);
+  if (!reminders.length) return;
+
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  const haversineMeters = (aLat: number, aLng: number, bLat: number, bLng: number) => {
+    const R = 6371000;
+    const dLat = toRad(bLat - aLat);
+    const dLng = toRad(bLng - aLng);
+    const s1 = Math.sin(dLat / 2) ** 2;
+    const s2 = Math.sin(dLng / 2) ** 2;
+    const c = 2 * Math.asin(Math.sqrt(s1 + Math.cos(toRad(aLat)) * Math.cos(toRad(bLat)) * s2));
+    return R * c;
+  };
+
+  // Use closest of the batch points to reduce flapping
+  for (const r of reminders) {
+    if (r.home_lat == null || r.home_lng == null) continue;
+    const meters = params.points.reduce((min, p) => {
+      const d = haversineMeters(p.lat, p.lng, r.home_lat as number, r.home_lng as number);
+      return d < min ? d : min;
+    }, Number.POSITIVE_INFINITY);
+
+    const thresholdKm = r.direction === 'pickup' ? (r.pickup_radius_km ?? 5) : (r.dropoff_radius_km ?? 10);
+    const within = meters <= thresholdKm * 1000;
+    if (!within) continue;
+
+    const type = r.direction === 'pickup' ? 'reminder.pickup' : 'reminder.dropoff';
+    // Cooldown window to avoid spamming: 15 minutes
+    const recent = await repo.hasRecentReminder(r.parent_user_id, type as any, r.student_id, 15);
+    if (recent) continue;
+
+    const tokens = await repo.listDeviceTokensByUser(r.parent_user_id);
+    const payload: NotificationPayload & { pushTokens?: string[] } = {
+      user_id: r.parent_user_id,
+      title: r.direction === 'pickup' ? 'Pickup reminder' : 'Dropoff reminder',
+      body: r.direction === 'pickup' ? 'Your child\'s bus is approaching home' : 'The bus is nearing home for dropoff',
+      type,
+      category: 'trip',
+      data: { student_id: r.student_id, trip_id: params.trip_id, distance_m: Math.round(meters) },
+      channels: { inapp: true, push: true, email: false, sms: false },
+      pushTokens: tokens
+    };
+    await dispatcher.dispatch(payload);
+  }
 }

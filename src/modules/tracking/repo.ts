@@ -15,6 +15,34 @@ export async function getDriverScopeByUser(userId: string): Promise<{ school_id:
   return rows[0];
 }
 
+export async function getParentForTarget(trip_id: string, target_id: string): Promise<{ parent_user_id: string | null; student_name: string | null; school_id: string | null } | null> {
+  const { rows } = await db.query(
+    `SELECT s.parent_user_id, s.name as student_name, t.school_id
+     FROM trip_targets tt
+     JOIN trips t ON t.id = tt.trip_id
+     JOIN students s ON s.id = tt.student_id
+     WHERE tt.trip_id = $1 AND tt.id = $2
+     LIMIT 1`,
+    [trip_id, target_id]
+  );
+  return rows[0] ?? null;
+}
+
+export async function getAdminUserIdBySchool(school_id: string): Promise<string | null> {
+  const { rows } = await db.query(`SELECT user_id FROM schools WHERE id = $1 LIMIT 1`, [school_id]);
+  return rows[0]?.user_id ?? null;
+}
+
+export async function getDriverUserIdByDriverId(driver_id: string): Promise<string | null> {
+  const { rows } = await db.query(`SELECT user_id FROM drivers WHERE id = $1 LIMIT 1`, [driver_id]);
+  return rows[0]?.user_id ?? null;
+}
+
+export async function listTeacherUserIdsBySchool(school_id: string): Promise<string[]> {
+  const { rows } = await db.query(`SELECT user_id FROM teachers WHERE school_id = $1 AND deleted_at IS NULL`, [school_id]);
+  return rows.map(r => r.user_id as string);
+}
+
 export async function getSchoolCoords(schoolId: string): Promise<{ latitude: number; longitude: number } | null> {
   const { rows } = await db.query(`SELECT latitude, longitude FROM schools WHERE id = $1`, [schoolId]);
   const r = rows[0];

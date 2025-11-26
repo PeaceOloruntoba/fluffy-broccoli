@@ -95,3 +95,36 @@ export async function listParentReminders(user_id: string) {
   const { rows } = await db.query(`SELECT * FROM parent_reminders WHERE parent_user_id = $1 ORDER BY created_at DESC`, [user_id]);
   return rows;
 }
+
+// For reminder evaluation from tracking
+export async function getRemindersForTrip(trip_id: string) {
+  const { rows } = await db.query(
+    `SELECT pr.parent_user_id, pr.student_id, pr.enabled,
+            pr.pickup_radius_km::float, pr.dropoff_radius_km::float,
+            tt.target_lat AS home_lat, tt.target_lng AS home_lng,
+            t.direction
+     FROM parent_reminders pr
+     JOIN trip_targets tt ON tt.student_id = pr.student_id AND tt.trip_id = $1 AND tt.target_kind = 'home'
+     JOIN trips t ON t.id = tt.trip_id
+     WHERE pr.enabled = TRUE`,
+    [trip_id]
+  );
+  return rows as Array<{ parent_user_id: string; student_id: string; enabled: boolean; pickup_radius_km: number; dropoff_radius_km: number; home_lat: number | null; home_lng: number | null; direction: 'pickup'|'dropoff' }>;
+}
+
+export async function listDeviceTokensByUser(user_id: string) {
+  const { rows } = await db.query(`SELECT token FROM device_tokens WHERE user_id = $1 AND enabled = TRUE`, [user_id]);
+  return rows.map(r => r.token as string);
+}
+
+export async function hasRecentReminder(user_id: string, type: 'reminder.pickup'|'reminder.dropoff', student_id: string, withinMinutes: number) {
+  const { rows } = await db.query(
+    `SELECT 1 FROM notifications
+     WHERE user_id = $1 AND type = $2
+       AND created_at > now() - ($4::int || ' minutes')::interval
+       AND (data->>'student_id') = $3
+     LIMIT 1`,
+    [user_id, type, student_id, withinMinutes]
+  );
+  return !!rows[0];
+}
