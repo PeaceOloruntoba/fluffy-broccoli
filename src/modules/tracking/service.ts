@@ -1,4 +1,5 @@
 import { getDriverScopeByUser, getAdminSchoolId, createTripWithTargets, insertLocations, patchTargetStatus, setTripEnded, findRunningTripForBus, getLiveForSchool, getLiveForParent, getSchoolCoords, getTripTargetsForOrdering, bulkUpdateTargetOrder, type TripDirection } from './repo.js';
+import { handleLocationPingForReminders } from '../notifications/service.js';
 
 export async function startTrip(params: { user_id: string; role: string; direction: TripDirection; route_name?: string }) {
   if (params.role !== 'driver') throw new Error('forbidden');
@@ -56,6 +57,8 @@ export async function addLocations(params: { user_id: string; role: string; trip
   // Driver can post for own running trip; admin may post on behalf (optional later). For now, restrict to driver.
   if (params.role !== 'driver') throw new Error('forbidden');
   const count = await insertLocations({ trip_id: params.trip_id, points: params.points });
+  // Fire-and-forget reminder evaluation (no await to keep ingestion fast)
+  handleLocationPingForReminders({ trip_id: params.trip_id, points: params.points.map(p => ({ lat: p.lat, lng: p.lng, recorded_at: p.recorded_at ?? null })) }).catch(() => {});
   return { inserted: count };
 }
 

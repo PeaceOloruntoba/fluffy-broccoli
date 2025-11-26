@@ -1,15 +1,16 @@
-import { addMinutes } from 'date-fns';
+import { addMinutes, addDays, isBefore } from 'date-fns';
 import { env } from '../shared/config/env.js';
 import { generateSixDigitOtp } from '../shared/utils/otp.js';
 import { hashPassword, verifyPassword } from '../shared/utils/password.js';
 import { signAccessToken } from '../shared/utils/jwt.js';
 import { sendEmail } from '../shared/services/email.js';
 import type { LoginRequest, LoginResponse } from './type.js';
-import { consumeOtp, createUserTx, deleteOtpsForEmailPurpose, findUserByEmailOrUsername, findValidOtp, getSchoolById, getSchoolByUserId, getParentByUserId, getTeacherByUserId, getUserByEmail, insertOtp, insertParentTx, insertSchoolTx, insertTeacherTx, isProfileVerified, reserveUniqueCodeTx, setUserEmailVerifiedByEmail, updateLastLogin, updateUserPassword } from './repo.js';
+import { consumeOtp, createUserTx, deleteOtpsForEmailPurpose, findUserByEmailOrUsername, findValidOtp, getSchoolById, getSchoolByUserId, getParentByUserId, getTeacherByUserId, getUserByEmail, insertOtp, insertParentTx, insertSchoolTx, insertTeacherTx, isProfileVerified, reserveUniqueCodeTx, setUserEmailVerifiedByEmail, updateLastLogin, updateUserPassword, insertRefreshToken, findRefreshToken, revokeRefreshToken, revokeAllUserRefreshTokens } from './repo.js';
 import { db } from '../shared/config/db.js';
 import type { SignupParentRequest, SignupSchoolRequest, SignupTeacherRequest } from './type.js';
 import { uploadBuffer } from '../shared/services/cloudinary.js';
 import { generatePersonCode, generateSchoolCode } from '../shared/utils/code.js';
+import crypto from 'crypto';
 
 export async function login(input: LoginRequest): Promise<LoginResponse> {
   const user = await findUserByEmailOrUsername(input.identifier);
@@ -20,12 +21,17 @@ export async function login(input: LoginRequest): Promise<LoginResponse> {
   if (!user.email_verified && user.role !== 'superadmin' && user.role !== 'dev') {
     throw new Error('email_not_verified');
   }
+
   if (['admin', 'parent', 'teacher', 'driver'].includes(user.role)) {
     const verified = await isProfileVerified(user.id, user.role as any);
     if (!verified) throw new Error('account_not_verified');
   }
   await updateLastLogin(user.id);
   const token = await signAccessToken({ sub: user.id, role: user.role });
+  // issue refresh token (opaque) valid for 30 days
+  const refresh = crypto.randomBytes(48).toString('base64url');
+  const refreshExpires = addDays(new Date(), 30);
+  await insertRefreshToken(user.id, refresh, refreshExpires, null);
   const { password, ...safeUser } = user as any;
 
   // Fetch profile based on role
@@ -38,7 +44,34 @@ export async function login(input: LoginRequest): Promise<LoginResponse> {
     profile = await getTeacherByUserId(user.id);
   }
 
-  return { token, user: safeUser, ...(profile && { profile }) };
+  return { token, user: safeUser, ...(profile && { profile }), refresh_token: refresh } as any;
+}
+
+export async function refreshAccessToken(refreshToken: string): Promise<{ token: string; refresh_token: string }> {
+  const stored = await findRefreshToken(refreshToken);
+  if (!stored) throw new Error('invalid_refresh_token');
+  if (stored.revoked_at) throw new Error('refresh_token_revoked');
+  if (isBefore(new Date(stored.expires_at), new Date())) throw new Error('refresh_token_expired');
+  // rotate token
+  await revokeRefreshToken(refreshToken);
+  const newRefresh = crypto.randomBytes(48).toString('base64url');
+  const refreshExpires = addDays(new Date(), 30);
+  await insertRefreshToken(stored.user_id, newRefresh, refreshExpires, null);
+  const token = await signAccessToken({ sub: stored.user_id, role: (await getRoleOfUser(stored.user_id)) });
+  return { token, refresh_token: newRefresh };
+}
+
+async function getRoleOfUser(userId: string): Promise<string> {
+  const { rows } = await db.query(`SELECT role FROM users WHERE id = $1`, [userId]);
+  return String(rows[0]?.role ?? 'parent');
+}
+
+export async function logout(refreshToken: string): Promise<void> {
+  await revokeRefreshToken(refreshToken);
+}
+
+export async function logoutAll(userId: string): Promise<void> {
+  await revokeAllUserRefreshTokens(userId);
 }
 
 export async function sendForgotPassword(email: string): Promise<void> {

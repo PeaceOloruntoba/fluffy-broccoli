@@ -71,6 +71,29 @@ Base: `/auth`
   - 200: `{ success:true, message:"email_verified" }`
 
 - POST `/resend-email-verification`
+
+### Sessions and tokens
+- Access tokens: JWT with short expiry (`JWT_ACCESS_EXPIRES`).
+- Refresh tokens: opaque 30-day tokens stored server-side (DB) and rotated on use.
+- Endpoints (token-in-body):
+  - POST `/auth/refresh` `{ "refresh_token": "<opaque>" }` → `{ token, refresh_token }`
+  - POST `/auth/logout` `{ "refresh_token": "<opaque>" }` → revokes that token
+  - POST `/auth/logout-all` (requires Authorization) → revokes all tokens for user
+
+### Cookie-based refresh (web apps)
+For browser apps, use httpOnly cookie for refresh.
+
+- Set cookie on client after login (client stores `refresh_token` in cookie). Alternatively, the server can set it when exchanging a refresh (see below).
+- Refresh
+  - POST `/auth/refresh-cookie`
+  - Reads `refresh_token` from cookie; sets a new rotated cookie.
+  - Response: `{ token }` (new access token). Use it for Authorization: Bearer.
+- Logout
+  - POST `/auth/logout-cookie`
+  - Reads cookie and revokes it; clears cookie.
+- Cookie attributes
+  - Name: `refresh_token`
+  - httpOnly, sameSite=lax, path=/auth, secure in production
   - Body: `{ "email": "user@example.com" }`
   - 200: `{ success:true, message:"otp_resent" }`
 
@@ -78,7 +101,7 @@ Base: `/auth`
 All signups are inside a DB transaction. OTP insert and email send happen before COMMIT; failures roll back the user/profile.
 
 - POST `/signup/school` (multipart/form-data)
-  - Fields: `name,email,phone,state?,city?,country?,address?,latitude?,longitude?,password`
+  - Fields: `name,email,phone,latitude?,longitude?,password` (coords from device/map picker)
   - File: `logo` (optional)
   - 201: `{ success:true, message:"signup_school_success", data:{ id, email } }`
 
@@ -88,7 +111,7 @@ All signups are inside a DB transaction. OTP insert and email send happen before
     {
       "fullname":"Jane Doe","phonenumber":"+234...","nin":"...","relationship":"Mother",
       "school_id":"<uuid>","email":"parent@example.com","password":"secret",
-      "address":"...","latitude":6.45,"longitude":3.39
+      "latitude":6.45,"longitude":3.39
     }
     ```
   - 201: `{ success:true, message:"signup_parent_success", data:{ id, email } }`

@@ -13,7 +13,7 @@ export type User = {
 };
 
 export type LoginRequest = { identifier: string; password: string };
-export type LoginResponse = { token: string; user: Omit<User, 'password'>; profile?: any };
+export type LoginResponse = { token: string; user: Omit<User, 'password'>; profile?: any; refresh_token?: string };
 
 export type ForgotPasswordRequest = { email: string };
 export type ResetPasswordRequest = { email: string; code: string; newPassword: string };

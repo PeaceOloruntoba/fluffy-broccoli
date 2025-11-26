@@ -149,4 +149,30 @@ export async function getTeacherByUserId(userId: string): Promise<any | null> {
   return rows[0] ?? null;
 }
 
+export async function insertRefreshToken(userId: string, token: string, expiresAt: Date, selector: string | null, userAgent?: string | null, ip?: string | null): Promise<{ id: string }> {
+  const { rows } = await db.query(
+    `INSERT INTO refresh_tokens (user_id, token, expires_at, selector, user_agent, ip)
+     VALUES ($1,$2,$3,$4,$5,$6)
+     RETURNING id`,
+    [userId, token, expiresAt, selector ?? null, userAgent ?? null, ip ?? null]
+  );
+  return rows[0];
+}
+
+export async function findRefreshToken(token: string): Promise<{ id: string; user_id: string; expires_at: string; revoked_at: string | null } | null> {
+  const { rows } = await db.query(
+    `SELECT id, user_id, expires_at, revoked_at FROM refresh_tokens WHERE token = $1 LIMIT 1`,
+    [token]
+  );
+  return rows[0] ?? null;
+}
+
+export async function revokeRefreshToken(token: string): Promise<void> {
+  await db.query(`UPDATE refresh_tokens SET revoked_at = now() WHERE token = $1 AND revoked_at IS NULL`, [token]);
+}
+
+export async function revokeAllUserRefreshTokens(userId: string): Promise<void> {
+  await db.query(`UPDATE refresh_tokens SET revoked_at = now() WHERE user_id = $1 AND revoked_at IS NULL`, [userId]);
+}
+
 export {};
