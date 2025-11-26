@@ -12,6 +12,7 @@ import busesRouter from '../modules/schools/buses/index.js';
 import driversRouter from '../modules/schools/drivers/route.js';
 import teachersRouter from '../modules/schools/teachers/route.js';
 import { requireAuth } from '../modules/shared/middlewares/auth.js';
+import attendanceRouter from '../modules/attendance/route.js';
 
 const router = Router();
 
@@ -35,6 +36,7 @@ router.use('/parents/students', parentStudentsRouter);
 router.use('/schools/buses', busesRouter);
 router.use('/schools/drivers', driversRouter);
 router.use('/schools/teachers', teachersRouter);
+router.use('/attendance', attendanceRouter);
 
 // Public endpoints
 router.get('/public/schools', async (_req, res, next) => {

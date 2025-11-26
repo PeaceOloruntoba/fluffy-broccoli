@@ -540,6 +540,81 @@ All endpoints require Authorization: Bearer <admin-jwt> and are scoped to the au
   - POST `/schools/students/assign/class` → `{ "class_id": "<uuid>", "student_ids": ["<uuid>","<uuid>"] }`
   - POST `/schools/students/unassign/class` → `{ "student_ids": ["<uuid>","<uuid>"] }`
 
+## Attendance
+
+Base: `/attendance` (requires Authorization: Bearer <jwt>)
+
+### Concepts
+- Two types:
+  - `school_attendance`: taken by admins or teachers for school/class context.
+  - `bus_attendance`: taken by admins or drivers for bus context.
+- Status enum: `present | absent | late`.
+- Idempotent per student per date (upsert).
+
+### Write attendance
+
+- POST `/attendance/school`
+  - Roles: `superadmin`, `admin`, `teacher`.
+  - Body:
+    ```json
+    {
+      "entries": [
+        { "student_id": "<uuid>", "status": "present", "note": "", "date": "2025-01-20" }
+      ],
+      "school_id": "<uuid|null>" // required only for superadmin
+    }
+    ```
+  - Scope rules:
+    - superadmin: must include `school_id`.
+    - admin: auto-scoped to own school.
+    - teacher: auto-scoped to own school and their assigned class; only students in their class can be recorded.
+  - 201: `{ success:true, message:"school_attendance_recorded", data:{ upserted: <count> } }`
+
+- POST `/attendance/bus`
+  - Roles: `superadmin`, `admin`, `driver`.
+  - Body:
+    ```json
+    {
+      "entries": [
+        { "student_id": "<uuid>", "status": "present", "note": "", "date": "2025-01-20" }
+      ],
+      "school_id": "<uuid|null>", // required only for superadmin
+      "bus_id": "<uuid|null>"     // optional for superadmin/admin; drivers use their assigned bus automatically
+    }
+    ```
+  - Scope rules:
+    - superadmin: can specify any `school_id`/`bus_id`.
+    - admin: auto-scoped to own school; can optionally specify `bus_id`.
+    - driver: auto-scoped to own school and own assigned bus; only students on that bus can be recorded.
+  - 201: `{ success:true, message:"bus_attendance_recorded", data:{ upserted: <count> } }`
+
+### Read attendance
+
+- GET `/attendance/school?date=YYYY-MM-DD&class_id=<uuid>&student_id=<uuid>&school_id=<uuid>`
+  - Roles: all (`superadmin`, `admin`, `teacher`, `driver`, `parent`).
+  - Scope rules:
+    - superadmin: may filter by `school_id`.
+    - admin: auto-scoped to own school.
+    - teacher: auto-scoped to own school and their class.
+    - driver: auto-scoped to students on their bus (via `student_buses`) when reading school attendance.
+    - parent: auto-scoped to their own child(ren) only.
+  - 200: `{ success:true, message:"school_attendance_list", data:[ { id, school_id, student_id, class_id, status, note, attendance_date, taken_at, taken_by_user_id, taken_by_role } ] }`
+
+- GET `/attendance/bus?date=YYYY-MM-DD&bus_id=<uuid>&student_id=<uuid>&school_id=<uuid>`
+  - Roles: all (`superadmin`, `admin`, `teacher`, `driver`, `parent`).
+  - Scope rules:
+    - superadmin: may filter by `school_id`/`bus_id`.
+    - admin: auto-scoped to own school; may filter by `bus_id`.
+    - teacher: auto-scoped to students in their class.
+    - driver: auto-scoped to their assigned bus only.
+    - parent: auto-scoped to their own child(ren) only.
+  - 200: `{ success:true, message:"bus_attendance_list", data:[ { id, school_id, student_id, bus_id, status, note, attendance_date, taken_at, taken_by_user_id, taken_by_role } ] }`
+
+### Notes
+- Writes are idempotent per student per date; subsequent writes update status/note.
+- Parent role has read-only access; cannot write attendance.
+- All endpoints enforce school scoping and role constraints at query level.
+
 ## Development
 - Dev server: `npm run dev`
 - Migrations: `npm run migrate`
