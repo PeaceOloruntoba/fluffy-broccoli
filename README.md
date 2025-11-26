@@ -688,6 +688,72 @@ Below summarizes what each role can do and the exact endpoints they should call.
   - GET `/attendance/bus?date=YYYY-MM-DD&student_id=<uuid>`
 
 ## Development
+## Tracking
+
+Base: `/tracking` (requires Authorization: Bearer <jwt>)
+
+### Concepts
+- Driver phone provides the live bus GPS.
+- Fixed points: school (from school profile) and parent homes (from parents profile lat/lng).
+- Trip directions: `pickup` (homes → school) and `dropoff` (school → homes).
+- One driver per bus; exactly one running trip per bus at a time.
+- Targets (students) are auto-seeded at trip start and can be marked as `picked`/`dropped` by the driver. Marked targets disappear from the driver’s map.
+- Parents see school + bus + their home; teachers/admin see school buses for their scope; superadmin can see any school.
+
+### Configuration (per school with sensible defaults)
+- Ping interval (seconds): default 10s (column: `schools.tracking_ping_secs`).
+- Geofence radii: defaults, configurable per school
+  - School radius: default 150m (column: `schools.tracking_school_geofence_m`).
+  - Home radius: default 75m (column: `schools.tracking_home_geofence_m`).
+- Stop ordering: nearest-neighbor ordering at trip start (from driver’s start location). Future improvements possible.
+
+### Driver
+- POST `/tracking/trips/start`
+  - Body:
+    ```json
+    { "direction": "pickup", "route_name": "Morning Run" }
+    ```
+  - 201: `{ success:true, message:"trip_started", data:{ trip_id } }`
+
+- POST `/tracking/trips/{tripId}/locations`
+  - Body:
+    ```json
+    {
+      "points": [
+        { "lat": 6.45, "lng": 3.39, "recorded_at": "2025-11-26T07:00:01Z", "speed_kph": 24.2, "heading": 180 }
+      ]
+    }
+    ```
+  - Post every ~10s; batching supported.
+
+- PATCH `/tracking/trips/{tripId}/targets/{targetId}`
+  - Body: `{ "status": "picked" | "dropped" | "skipped" }`
+  - Marks target; emits event; removes pin from driver’s map.
+
+- POST `/tracking/trips/{tripId}/end`
+  - Ends current trip (driver/admin/superadmin).
+
+### Live views
+- GET `/tracking/live`
+  - Roles:
+    - superadmin: `?school_id=<uuid>` required
+    - admin/teacher/driver: auto-scoped to their school
+  - Response: active trips with latest location, remaining targets count, bus info.
+
+- GET `/tracking/live/mine` (parent)
+  - Response: child’s bus current location + school location + parent home location.
+
+### Roles summary
+- **Driver**: start/end trip; post locations; mark targets; view live (school scope).
+- **Admin**: live view for their school; end trip if necessary.
+- **Teacher**: live view (school scope; class-only filtering can be added later).
+- **Parent**: live mine only; sees bus + school + their home.
+- **Superadmin**: live view for any school via `school_id` filter.
+
+### Events and notifications
+- Events tracked: `start`, `end`, `picked`, `dropped`, `geofence_enter/exit`, `sos`, etc.
+- SOS notifications (push/email/sms) to all parties will be added later.
+
 - Dev server: `npm run dev`
 - Migrations: `npm run migrate`
 - Seed superadmin:

@@ -13,6 +13,7 @@ import driversRouter from '../modules/schools/drivers/route.js';
 import teachersRouter from '../modules/schools/teachers/route.js';
 import { requireAuth } from '../modules/shared/middlewares/auth.js';
 import attendanceRouter from '../modules/attendance/route.js';
+import trackingRouter from '../modules/tracking/route.js';
 
 const router = Router();
 
@@ -37,6 +38,7 @@ router.use('/schools/buses', busesRouter);
 router.use('/schools/drivers', driversRouter);
 router.use('/schools/teachers', teachersRouter);
 router.use('/attendance', attendanceRouter);
+router.use('/tracking', trackingRouter);
 
 // Public endpoints
 router.get('/public/schools', async (_req, res, next) => {
