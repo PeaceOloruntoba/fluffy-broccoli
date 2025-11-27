@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { z } from 'zod';
 import { sendError, sendSuccess } from '../../shared/utils/response.js';
-import { getSchoolByUserId } from '../../auth/repo.js';
+import { getSchoolByUserId, getTeacherByUserId } from '../../auth/repo.js';
 import * as service from './service.js';
 
 const createSchema = z.object({
@@ -145,5 +145,20 @@ export async function unassignTeacherClass(req: Request, res: Response) {
     return sendSuccess(res, null, 'teacher_unassigned_from_class');
   } catch (e) {
     return sendError(res, e instanceof Error ? e.message : 'unassign_teacher_failed', 400);
+  }
+}
+
+// Teacher: list my students (students in my assigned class)
+export async function listMyStudents(req: Request, res: Response) {
+  try {
+    const user = (req as any).auth;
+    if (!user) return sendError(res, 'unauthorized', 401);
+    const teacher = await getTeacherByUserId(user.sub);
+    if (!teacher) return sendError(res, 'teacher_profile_not_found', 404);
+    const details = await service.getTeacher(teacher.id, teacher.school_id);
+    if (!details) return sendError(res, 'teacher_not_found_or_no_class', 404);
+    return sendSuccess(res, { class: details.class, students: details.students }, 'teacher_students');
+  } catch (e) {
+    return sendError(res, e instanceof Error ? e.message : 'list_teacher_students_failed', 400);
   }
 }
