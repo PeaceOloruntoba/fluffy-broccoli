@@ -37,7 +37,7 @@ export async function createTeacher(req: Request, res: Response) {
     const result = await service.createTeacherAsSchool(school.id, user.sub, parsed.data);
     return sendSuccess(res, result, 'teacher_created', 201);
   } catch (e) {
-    return sendError(res, e instanceof Error ? e.message : 'create_teacher_failed', 400);
+    return sendError(res, e instanceof Error ? e.message : 'create_teacher_failed', 400, e);
   }
 }
 
@@ -50,7 +50,7 @@ export async function listTeachers(req: Request, res: Response) {
     const rows = await service.listTeachers(school.id);
     return sendSuccess(res, rows, 'teachers_list');
   } catch (e) {
-    return sendError(res, e instanceof Error ? e.message : 'list_teachers_failed', 400);
+    return sendError(res, e instanceof Error ? e.message : 'list_teachers_failed', 400, e);
   }
 }
 
@@ -65,7 +65,7 @@ export async function getTeacherById(req: Request, res: Response) {
     if (!row) return sendError(res, 'teacher_not_found_or_unauthorized', 404);
     return sendSuccess(res, row, 'teacher_details');
   } catch (e) {
-    return sendError(res, e instanceof Error ? e.message : 'get_teacher_failed', 400);
+    return sendError(res, e instanceof Error ? e.message : 'get_teacher_failed', 400, e);
   }
 }
 
@@ -82,7 +82,7 @@ export async function editTeacher(req: Request, res: Response) {
     if (!ok) return sendError(res, 'teacher_not_found_or_unauthorized', 404);
     return sendSuccess(res, null, 'teacher_updated');
   } catch (e) {
-    return sendError(res, e instanceof Error ? e.message : 'update_teacher_failed', 400);
+    return sendError(res, e instanceof Error ? e.message : 'update_teacher_failed', 400, e);
   }
 }
 
@@ -97,7 +97,7 @@ export async function deleteTeacher(req: Request, res: Response) {
     if (!ok) return sendError(res, 'teacher_not_found_or_unauthorized', 404);
     return sendSuccess(res, null, 'teacher_deleted');
   } catch (e) {
-    return sendError(res, e instanceof Error ? e.message : 'delete_teacher_failed', 400);
+    return sendError(res, e instanceof Error ? e.message : 'delete_teacher_failed', 400, e);
   }
 }
 
@@ -112,7 +112,7 @@ export async function verifyTeacher(req: Request, res: Response) {
     if (!ok) return sendError(res, 'teacher_not_found_or_unauthorized', 404);
     return sendSuccess(res, null, 'teacher_verified');
   } catch (e) {
-    return sendError(res, e instanceof Error ? e.message : 'verify_teacher_failed', 400);
+    return sendError(res, e instanceof Error ? e.message : 'verify_teacher_failed', 400, e);
   }
 }
 
@@ -130,7 +130,7 @@ export async function assignTeacherClass(req: Request, res: Response) {
     await service.assignTeacherToClass(school.id, teacherId, parsed.data.class_id);
     return sendSuccess(res, null, 'teacher_assigned_to_class');
   } catch (e) {
-    return sendError(res, e instanceof Error ? e.message : 'assign_teacher_failed', 400);
+    return sendError(res, e instanceof Error ? e.message : 'assign_teacher_failed', 400, e);
   }
 }
 
@@ -144,7 +144,7 @@ export async function unassignTeacherClass(req: Request, res: Response) {
     await service.unassignTeacherFromClass(school.id, teacherId);
     return sendSuccess(res, null, 'teacher_unassigned_from_class');
   } catch (e) {
-    return sendError(res, e instanceof Error ? e.message : 'unassign_teacher_failed', 400);
+    return sendError(res, e instanceof Error ? e.message : 'unassign_teacher_failed', 400, e);
   }
 }
 
@@ -159,6 +159,6 @@ export async function listMyStudents(req: Request, res: Response) {
     if (!details) return sendError(res, 'teacher_not_found_or_no_class', 404);
     return sendSuccess(res, { class: details.class, students: details.students }, 'teacher_students');
   } catch (e) {
-    return sendError(res, e instanceof Error ? e.message : 'list_teacher_students_failed', 400);
+    return sendError(res, e instanceof Error ? e.message : 'list_teacher_students_failed', 400, e);
   }
 }

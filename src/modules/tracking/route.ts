@@ -6,9 +6,12 @@ const router = Router();
 
 // Driver actions
 router.post('/trips/start', requireAuth(['driver']), ctrl.startTrip);
+router.get('/trips/running', requireAuth(['driver']), ctrl.getRunningTrip);
 router.post('/trips/:tripId/locations', requireAuth(['driver']), ctrl.postLocations);
 router.patch('/trips/:tripId/targets/:targetId', requireAuth(['driver']), ctrl.patchTarget);
 router.post('/trips/:tripId/end', requireAuth(['driver','admin','superadmin']), ctrl.endTrip);
+// Trip history (role-scoped)
+router.get('/trips', requireAuth(), ctrl.listTrips);
 
 // Live views
 router.get('/live', requireAuth(), ctrl.live);

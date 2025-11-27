@@ -169,6 +169,87 @@ export async function findRunningTripForBus(schoolId: string, busId: string): Pr
   return rows[0] ?? null;
 }
 
+export async function findRunningTripForDriverUser(userId: string): Promise<{ id: string; school_id: string; bus_id: string; driver_id: string; direction: TripDirection } | null> {
+  const { rows } = await db.query(
+    `SELECT t.id, t.school_id, t.bus_id, t.driver_id, t.direction
+     FROM trips t
+     JOIN drivers d ON d.id = t.driver_id AND d.user_id = $1
+     WHERE t.status = 'running'
+     ORDER BY t.start_time DESC
+     LIMIT 1`,
+    [userId]
+  );
+  return rows[0] ?? null;
+}
+
+export async function getTripByIdSimple(tripId: string): Promise<{ id: string; school_id: string; bus_id: string; driver_id: string; direction: TripDirection; status: string } | null> {
+  const { rows } = await db.query(`SELECT id, school_id, bus_id, driver_id, direction, status FROM trips WHERE id = $1 LIMIT 1`, [tripId]);
+  return rows[0] ?? null;
+}
+
+export async function listTripTargetsSummary(tripId: string): Promise<Array<{ target_id: string; student_id: string; name: string; status: string; order_index: number | null }>> {
+  const { rows } = await db.query(
+    `SELECT tt.id AS target_id, tt.student_id, s.name, tt.status, tt.order_index
+     FROM trip_targets tt JOIN students s ON s.id = tt.student_id
+     WHERE tt.trip_id = $1
+     ORDER BY COALESCE(tt.order_index, 999999) ASC, tt.created_at ASC`,
+    [tripId]
+  );
+  return rows.map(r => ({ target_id: r.target_id, student_id: r.student_id, name: r.name, status: r.status, order_index: r.order_index ?? null }));
+}
+
+export async function listTripsByDriverUser(userId: string, opts: { status?: string; direction?: string; cursor?: string | null; limit?: number }): Promise<any[]> {
+  const params: any[] = [userId];
+  let i = params.length + 1;
+  let where = `t.driver_id = (SELECT id FROM drivers WHERE user_id = $1 LIMIT 1)`;
+  if (opts.status) { where += ` AND t.status = $${i++}::trip_status`; params.push(opts.status); }
+  if (opts.direction) { where += ` AND t.direction = $${i++}::trip_direction`; params.push(opts.direction); }
+  if (opts.cursor) { where += ` AND t.created_at < (SELECT created_at FROM trips WHERE id = $${i++})`; params.push(opts.cursor); }
+  const limit = Math.max(1, Math.min(opts.limit ?? 20, 100));
+  const { rows } = await db.query(
+    `SELECT t.id, t.school_id, t.bus_id, t.driver_id, t.direction, t.status, t.route_name, t.start_time, t.end_time
+     FROM trips t WHERE ${where} ORDER BY t.created_at DESC LIMIT ${limit}`,
+    params
+  );
+  return rows;
+}
+
+export async function listTripsBySchoolUser(userId: string, opts: { status?: string; direction?: string; cursor?: string | null; limit?: number }): Promise<any[]> {
+  const params: any[] = [userId];
+  let i = params.length + 1;
+  let where = `t.school_id = (SELECT id FROM schools WHERE user_id = $1 LIMIT 1)`;
+  if (opts.status) { where += ` AND t.status = $${i++}::trip_status`; params.push(opts.status); }
+  if (opts.direction) { where += ` AND t.direction = $${i++}::trip_direction`; params.push(opts.direction); }
+  if (opts.cursor) { where += ` AND t.created_at < (SELECT created_at FROM trips WHERE id = $${i++})`; params.push(opts.cursor); }
+  const limit = Math.max(1, Math.min(opts.limit ?? 20, 100));
+  const { rows } = await db.query(
+    `SELECT t.id, t.school_id, t.bus_id, t.driver_id, t.direction, t.status, t.route_name, t.start_time, t.end_time
+     FROM trips t WHERE ${where} ORDER BY t.created_at DESC LIMIT ${limit}`,
+    params
+  );
+  return rows;
+}
+
+export async function listTripsByParentUser(userId: string, opts: { status?: string; direction?: string; cursor?: string | null; limit?: number }): Promise<any[]> {
+  const params: any[] = [userId];
+  let i = params.length + 1;
+  let where = `EXISTS (
+    SELECT 1 FROM trip_targets tt
+    JOIN students s ON s.id = tt.student_id
+    WHERE tt.trip_id = t.id AND s.parent_user_id = $1
+  )`;
+  if (opts.status) { where += ` AND t.status = $${i++}::trip_status`; params.push(opts.status); }
+  if (opts.direction) { where += ` AND t.direction = $${i++}::trip_direction`; params.push(opts.direction); }
+  if (opts.cursor) { where += ` AND t.created_at < (SELECT created_at FROM trips WHERE id = $${i++})`; params.push(opts.cursor); }
+  const limit = Math.max(1, Math.min(opts.limit ?? 20, 100));
+  const { rows } = await db.query(
+    `SELECT t.id, t.school_id, t.bus_id, t.driver_id, t.direction, t.status, t.route_name, t.start_time, t.end_time
+     FROM trips t WHERE ${where} ORDER BY t.created_at DESC LIMIT ${limit}`,
+    params
+  );
+  return rows;
+}
+
 export async function getLiveForSchool(schoolId: string): Promise<any[]> {
   const { rows } = await db.query(
     `WITH latest AS (

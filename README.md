@@ -330,6 +330,11 @@ Modules: Tracking (mine), Notifications, Reminders
     { "success": true, "message": "live_mine", "data": { "trip_id": "<uuid>", "direction": "pickup", "lat": 6.4512, "lng": 3.3901, "recorded_at": "2025-11-27T07:30:00Z", "school_lat": 6.4700, "school_lng": 3.4000, "home_lat": 6.4400, "home_lng": 3.3800 } }
     ```
 
+  - Trip history (my children's trips)
+    - GET `/tracking/trips`
+    - Optional query: `status`, `direction`, `cursor`, `limit`
+    - 200 returns `trips_list` as above
+
 - Notifications (in-app)
   - GET `/notifications`
     - Optional query: `is_read=true|false`, `cursor=<id>`, `limit=20`
@@ -431,6 +436,26 @@ Modules: Tracking, Notifications
     { "success": true, "message": "trip_ended", "data": { "ended": true } }
     ```
 
+- Get running trip (driver)
+  - GET `/tracking/trips/running`
+  - 200:
+    ```json
+    { "success": true, "message": "running_trip", "data": { "id": "<trip_id>", "school_id": "<uuid>", "bus_id": "<uuid>", "driver_id": "<uuid>", "direction": "pickup", "targets": [ { "target_id": "<uuid>", "student_id": "<uuid>", "name": "John Doe", "status": "pending", "order_index": 1 } ] } }
+    ```
+  - Notes: Use this after relogin to resume an ongoing trip.
+
+- Trip history
+  - GET `/tracking/trips`
+  - Optional query:
+    - `status=running|ended`
+    - `direction=pickup|dropoff`
+    - `cursor=<trip_id>`
+    - `limit=1..100`
+  - 200:
+    ```json
+    { "success": true, "message": "trips_list", "data": [ { "id": "<uuid>", "school_id": "<uuid>", "bus_id": "<uuid>", "driver_id": "<uuid>", "direction": "pickup", "status": "ended", "route_name": "Morning Route", "start_time": "...", "end_time": "..." } ] }
+    ```
+
 - Notifications (in-app)
   - GET `/notifications`
   - POST `/notifications/:id/read`
@@ -451,6 +476,11 @@ Modules: Tracking, Attendance, Parents, Students, Drivers/Buses, Teachers/Classe
       [ { "trip_id": "<uuid>", "bus_id": "<uuid>", "direction": "pickup", "lat": 6.45, "lng": 3.39, "recorded_at": "...", "bus_name": "Bus A", "remaining_pending": 5 } ]
       ```
 
+  - Trip history (school-wide)
+    - GET `/tracking/trips`
+    - Optional query: `status`, `direction`, `cursor`, `limit`
+    - 200 returns `trips_list` (array of trips with basic fields)
+
 - Attendance
   - Write school attendance
     - POST `/attendance/school`
@@ -468,6 +498,18 @@ Modules: Tracking, Attendance, Parents, Students, Drivers/Buses, Teachers/Classe
       201: `{ "success": true, "message": "bus_attendance_recorded", "data": { "upserted": 1 } }`
   - Read bus attendance
     - GET `/attendance/bus?date=YYYY-MM-DD&bus_id=<uuid>&student_id=<uuid>`
+
+  - Driver bus attendance (tied to trip)
+    - POST `/attendance/bus`
+      ```json
+      { "entries": [ { "student_id": "<uuid>", "status": "present" } ], "trip_id": "<trip_id>" }
+      ```
+    - Rules:
+      - Drivers can take bus attendance only on a running `pickup` trip.
+      - Only students assigned to the driver's bus and present in the trip's targets are allowed.
+      - `present` can only be marked for targets with status `picked`.
+      - `absent` is allowed regardless; `late` is reserved for school (admins/teachers) to maintain record integrity.
+      - Admins can post bus attendance with optional `school_id`/`bus_id` (not tied to an active trip), for data corrections.
 
 - Parents
   - Create parent

@@ -1,4 +1,4 @@
-import { getDriverScopeByUser, getAdminSchoolId, createTripWithTargets, insertLocations, patchTargetStatus, setTripEnded, findRunningTripForBus, getLiveForSchool, getLiveForParent, getSchoolCoords, getTripTargetsForOrdering, bulkUpdateTargetOrder, type TripDirection, getDriverUserIdByDriverId, getAdminUserIdBySchool, listTeacherUserIdsBySchool, getParentForTarget } from './repo.js';
+import { getDriverScopeByUser, getAdminSchoolId, createTripWithTargets, insertLocations, patchTargetStatus, setTripEnded, findRunningTripForBus, getLiveForSchool, getLiveForParent, getSchoolCoords, getTripTargetsForOrdering, bulkUpdateTargetOrder, type TripDirection, getDriverUserIdByDriverId, getAdminUserIdBySchool, listTeacherUserIdsBySchool, getParentForTarget, listTripsByDriverUser, listTripsBySchoolUser, listTripsByParentUser, findRunningTripForDriverUser, listTripTargetsSummary } from './repo.js';
 import { handleLocationPingForReminders } from '../notifications/service.js';
 import { db } from '../shared/config/db.js';
 import * as notifications from '../notifications/service.js';
@@ -153,4 +153,27 @@ export async function getLiveMine(params: { user_id: string; role: string }) {
   if (params.role !== 'parent') throw new Error('forbidden');
   const mine = await getLiveForParent(params.user_id);
   return mine ?? null;
+}
+
+export async function getRunningTripForDriver(params: { user_id: string; role: string }) {
+  if (params.role !== 'driver') throw new Error('forbidden');
+  const trip = await findRunningTripForDriverUser(params.user_id);
+  if (!trip) return null;
+  const targets = await listTripTargetsSummary(trip.id);
+  return { ...trip, targets };
+}
+
+export async function listTripsForDriver(params: { user_id: string; role: string; status?: string; direction?: string; cursor?: string | null; limit?: number }) {
+  if (params.role !== 'driver') throw new Error('forbidden');
+  return listTripsByDriverUser(params.user_id, { status: params.status, direction: params.direction, cursor: params.cursor ?? null, limit: params.limit });
+}
+
+export async function listTripsForSchool(params: { user_id: string; role: string; status?: string; direction?: string; cursor?: string | null; limit?: number }) {
+  if (params.role !== 'admin' && params.role !== 'superadmin') throw new Error('forbidden');
+  return listTripsBySchoolUser(params.user_id, { status: params.status, direction: params.direction, cursor: params.cursor ?? null, limit: params.limit });
+}
+
+export async function listTripsForParent(params: { user_id: string; role: string; status?: string; direction?: string; cursor?: string | null; limit?: number }) {
+  if (params.role !== 'parent') throw new Error('forbidden');
+  return listTripsByParentUser(params.user_id, { status: params.status, direction: params.direction, cursor: params.cursor ?? null, limit: params.limit });
 }

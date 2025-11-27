@@ -25,7 +25,7 @@ export async function createBus(req: Request, res: Response) {
     const bus = await service.createBus(school.id, user.sub, parsed.data);
     return sendSuccess(res, bus, 'bus_created', 201);
   } catch (e) {
-    return sendError(res, e instanceof Error ? e.message : 'create_bus_failed', 400);
+    return sendError(res, e instanceof Error ? e.message : 'create_bus_failed', 400, e);
   }
 }
 
@@ -38,7 +38,7 @@ export async function listBuses(req: Request, res: Response) {
     const rows = await service.listBuses(school.id);
     return sendSuccess(res, rows, 'buses_list');
   } catch (e) {
-    return sendError(res, e instanceof Error ? e.message : 'list_buses_failed', 400);
+    return sendError(res, e instanceof Error ? e.message : 'list_buses_failed', 400, e);
   }
 }
 
@@ -53,7 +53,7 @@ export async function getBusById(req: Request, res: Response) {
     if (!row) return sendError(res, 'bus_not_found_or_unauthorized', 404);
     return sendSuccess(res, row, 'bus_details');
   } catch (e) {
-    return sendError(res, e instanceof Error ? e.message : 'get_bus_failed', 400);
+    return sendError(res, e instanceof Error ? e.message : 'get_bus_failed', 400, e);
   }
 }
 
@@ -70,7 +70,7 @@ export async function editBus(req: Request, res: Response) {
     if (!ok) return sendError(res, 'bus_not_found_or_unauthorized', 404);
     return sendSuccess(res, null, 'bus_updated');
   } catch (e) {
-    return sendError(res, e instanceof Error ? e.message : 'update_bus_failed', 400);
+    return sendError(res, e instanceof Error ? e.message : 'update_bus_failed', 400, e);
   }
 }
 
@@ -85,6 +85,6 @@ export async function deleteBus(req: Request, res: Response) {
     if (!ok) return sendError(res, 'bus_not_found_or_unauthorized', 404);
     return sendSuccess(res, null, 'bus_deleted');
   } catch (e) {
-    return sendError(res, e instanceof Error ? e.message : 'delete_bus_failed', 400);
+    return sendError(res, e instanceof Error ? e.message : 'delete_bus_failed', 400, e);
   }
 }

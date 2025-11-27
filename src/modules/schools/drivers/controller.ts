@@ -26,7 +26,7 @@ export async function createDriver(req: Request, res: Response) {
     const result = await service.createDriver(school.id, user.sub, parsed.data);
     return sendSuccess(res, result, 'driver_created', 201);
   } catch (e) {
-    return sendError(res, e instanceof Error ? e.message : 'create_driver_failed', 400);
+    return sendError(res, e instanceof Error ? e.message : 'create_driver_failed', 400, e);
   }
 }
 
@@ -39,7 +39,7 @@ export async function listDrivers(req: Request, res: Response) {
     const rows = await service.listDrivers(school.id);
     return sendSuccess(res, rows, 'drivers_list');
   } catch (e) {
-    return sendError(res, e instanceof Error ? e.message : 'list_drivers_failed', 400);
+    return sendError(res, e instanceof Error ? e.message : 'list_drivers_failed', 400, e);
   }
 }
 
@@ -54,7 +54,7 @@ export async function getDriverById(req: Request, res: Response) {
     if (!row) return sendError(res, 'driver_not_found_or_unauthorized', 404);
     return sendSuccess(res, row, 'driver_details');
   } catch (e) {
-    return sendError(res, e instanceof Error ? e.message : 'get_driver_failed', 400);
+    return sendError(res, e instanceof Error ? e.message : 'get_driver_failed', 400, e);
   }
 }
 
@@ -71,7 +71,7 @@ export async function editDriver(req: Request, res: Response) {
     if (!ok) return sendError(res, 'driver_not_found_or_unauthorized', 404);
     return sendSuccess(res, null, 'driver_updated');
   } catch (e) {
-    return sendError(res, e instanceof Error ? e.message : 'update_driver_failed', 400);
+    return sendError(res, e instanceof Error ? e.message : 'update_driver_failed', 400, e);
   }
 }
 
@@ -86,7 +86,7 @@ export async function deleteDriver(req: Request, res: Response) {
     if (!ok) return sendError(res, 'driver_not_found_or_unauthorized', 404);
     return sendSuccess(res, null, 'driver_deleted');
   } catch (e) {
-    return sendError(res, e instanceof Error ? e.message : 'delete_driver_failed', 400);
+    return sendError(res, e instanceof Error ? e.message : 'delete_driver_failed', 400, e);
   }
 }
 
@@ -104,7 +104,7 @@ export async function assignDriverBus(req: Request, res: Response) {
     await service.assignDriverToBus(school.id, driverId, parsed.data.bus_id);
     return sendSuccess(res, null, 'driver_assigned_to_bus');
   } catch (e) {
-    return sendError(res, e instanceof Error ? e.message : 'assign_driver_failed', 400);
+    return sendError(res, e instanceof Error ? e.message : 'assign_driver_failed', 400, e);
   }
 }
 
@@ -118,6 +118,6 @@ export async function unassignDriverBus(req: Request, res: Response) {
     await service.unassignDriverFromBus(school.id, driverId);
     return sendSuccess(res, null, 'driver_unassigned_from_bus');
   } catch (e) {
-    return sendError(res, e instanceof Error ? e.message : 'unassign_driver_failed', 400);
+    return sendError(res, e instanceof Error ? e.message : 'unassign_driver_failed', 400, e);
   }
 }

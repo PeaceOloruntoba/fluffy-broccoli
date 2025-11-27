@@ -54,7 +54,7 @@ export async function login(req: Request, res: Response) {
     const result = await service.login(parsed.data);
     return sendSuccess(res, result, 'login_success');
   } catch (e) {
-    return sendError(res, e instanceof Error ? e.message : 'login_failed', 401);
+    return sendError(res, e instanceof Error ? e.message : 'login_failed', 401, e);
   }
 }
 
@@ -76,7 +76,7 @@ export async function refreshCookie(req: Request, res: Response) {
     res.cookie('refresh_token', result.refresh_token, { httpOnly: true, sameSite: 'lax', secure, path: '/auth', maxAge: 30 * 24 * 60 * 60 * 1000 });
     return sendSuccess(res, { token: result.token }, 'token_refreshed');
   } catch (e) {
-    return sendError(res, e instanceof Error ? e.message : 'refresh_failed', 400);
+    return sendError(res, e instanceof Error ? e.message : 'refresh_failed', 400, e);
   }
 }
 
@@ -89,7 +89,7 @@ export async function logoutCookie(req: Request, res: Response) {
     res.clearCookie('refresh_token', { httpOnly: true, sameSite: 'lax', secure, path: '/auth' });
     return sendSuccess(res, null, 'logout_success');
   } catch (e) {
-    return sendError(res, e instanceof Error ? e.message : 'logout_failed', 400);
+    return sendError(res, e instanceof Error ? e.message : 'logout_failed', 400, e);
   }
 }
 
@@ -100,7 +100,7 @@ export async function refresh(req: Request, res: Response) {
     const result = await service.refreshAccessToken(parsed.data.refresh_token);
     return sendSuccess(res, result, 'token_refreshed');
   } catch (e) {
-    return sendError(res, e instanceof Error ? e.message : 'refresh_failed', 400);
+    return sendError(res, e instanceof Error ? e.message : 'refresh_failed', 400, e);
   }
 }
 
@@ -111,7 +111,7 @@ export async function postLogout(req: Request, res: Response) {
     await service.logout(parsed.data.refresh_token);
     return sendSuccess(res, null, 'logout_success');
   } catch (e) {
-    return sendError(res, e instanceof Error ? e.message : 'logout_failed', 400);
+    return sendError(res, e instanceof Error ? e.message : 'logout_failed', 400, e);
   }
 }
 
@@ -122,7 +122,7 @@ export async function postLogoutAll(req: Request, res: Response) {
     await service.logoutAll(auth.sub);
     return sendSuccess(res, null, 'logout_all_success');
   } catch (e) {
-    return sendError(res, e instanceof Error ? e.message : 'logout_all_failed', 400);
+    return sendError(res, e instanceof Error ? e.message : 'logout_all_failed', 400, e);
   }
 }
 
@@ -140,7 +140,7 @@ export async function resetPassword(req: Request, res: Response) {
     await service.resetPassword(parsed.data.email, parsed.data.code, parsed.data.newPassword);
     return sendSuccess(res, null, 'password_reset_success');
   } catch (e) {
-    return sendError(res, e instanceof Error ? e.message : 'password_reset_failed', 400);
+    return sendError(res, e instanceof Error ? e.message : 'password_reset_failed', 400, e);
   }
 }
 
@@ -151,7 +151,7 @@ export async function verifyEmail(req: Request, res: Response) {
     await service.verifyEmail(parsed.data.email, parsed.data.code);
     return sendSuccess(res, null, 'email_verified');
   } catch (e) {
-    return sendError(res, e instanceof Error ? e.message : 'verification_failed', 400);
+    return sendError(res, e instanceof Error ? e.message : 'verification_failed', 400, e);
   }
 }
 
@@ -162,7 +162,7 @@ export async function resendEmailVerification(req: Request, res: Response) {
     await service.resendEmailVerification(parsed.data.email);
     return sendSuccess(res, null, 'otp_resent');
   } catch (e) {
-    return sendError(res, e instanceof Error ? e.message : 'resend_failed', 400);
+    return sendError(res, e instanceof Error ? e.message : 'resend_failed', 400, e);
   }
 }
 
@@ -175,7 +175,7 @@ export async function signupSchool(req: Request, res: Response) {
     const result = await service.signupSchool({ ...parsed.data, logoFile: file?.buffer ?? null });
     return sendSuccess(res, result, 'signup_school_success', 201);
   } catch (e) {
-    return sendError(res, e instanceof Error ? e.message : 'signup_failed', 400);
+    return sendError(res, e instanceof Error ? e.message : 'signup_failed', 400, e);
   }
 }
 
@@ -186,7 +186,7 @@ export async function signupParent(req: Request, res: Response) {
     const result = await service.signupParent(parsed.data);
     return sendSuccess(res, result, 'signup_parent_success', 201);
   } catch (e) {
-    return sendError(res, e instanceof Error ? e.message : 'signup_failed', 400);
+    return sendError(res, e instanceof Error ? e.message : 'signup_failed', 400, e);
   }
 }
 

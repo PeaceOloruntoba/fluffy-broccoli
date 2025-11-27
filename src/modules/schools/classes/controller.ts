@@ -35,7 +35,7 @@ export async function addClass(req: Request, res: Response) {
     if (message.includes('unique_class_code_per_school')) {
       return sendError(res, 'class_code_already_exists', 400);
     }
-    return sendError(res, message, 400);
+    return sendError(res, message, 400, e);
   }
 }
 
@@ -58,7 +58,7 @@ export async function removeClassEndpoint(req: Request, res: Response) {
 
     return sendSuccess(res, null, 'class_deleted');
   } catch (e) {
-    return sendError(res, e instanceof Error ? e.message : 'delete_class_failed', 400);
+    return sendError(res, e instanceof Error ? e.message : 'delete_class_failed', 400, e);
   }
 }
 
@@ -72,6 +72,6 @@ export async function listClasses(req: Request, res: Response) {
     const classes = await service.listClassesBySchool(schoolId);
     return sendSuccess(res, classes, 'classes_list');
   } catch (e) {
-    return sendError(res, e instanceof Error ? e.message : 'list_classes_failed', 400);
+    return sendError(res, e instanceof Error ? e.message : 'list_classes_failed', 400, e);
   }
 }

@@ -7,6 +7,12 @@ export function notFoundHandler(_req: Request, res: Response) {
 }
 
 export function errorHandler(err: unknown, _req: Request, res: Response, _next: NextFunction) {
+  // Log full error to console
+  if (err instanceof Error) {
+    console.error('[ERROR]', err.stack || err.message, err);
+  } else {
+    console.error('[ERROR]', err);
+  }
   if (err instanceof ZodError) {
     return res.status(400).json({ success: false, message: 'validation_error', errors: err.flatten() });
   }

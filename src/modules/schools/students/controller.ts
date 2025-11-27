@@ -29,7 +29,7 @@ export async function createStudent(req: Request, res: Response) {
     const row = await service.createStudent(school.id, parsed.data);
     return sendSuccess(res, row, 'student_created', 201);
   } catch (e) {
-    return sendError(res, e instanceof Error ? e.message : 'create_student_failed', 400);
+    return sendError(res, e instanceof Error ? e.message : 'create_student_failed', 400, e);
   }
 }
 
@@ -44,7 +44,7 @@ export async function getStudentById(req: Request, res: Response) {
     if (!row) return sendError(res, 'student_not_found_or_unauthorized', 404);
     return sendSuccess(res, row, 'student_details');
   } catch (e) {
-    return sendError(res, e instanceof Error ? e.message : 'get_student_failed', 400);
+    return sendError(res, e instanceof Error ? e.message : 'get_student_failed', 400, e);
   }
 }
 
@@ -93,7 +93,7 @@ export async function bulkCreateStudents(req: Request, res: Response) {
     const count = await service.bulkCreateStudents(school.id, rows);
     return sendSuccess(res, { inserted: count }, 'students_bulk_created', 201);
   } catch (e) {
-    return sendError(res, e instanceof Error ? e.message : 'bulk_create_failed', 400);
+    return sendError(res, e instanceof Error ? e.message : 'bulk_create_failed', 400, e);
   }
 }
 
@@ -108,7 +108,7 @@ export async function listStudents(req: Request, res: Response) {
     const rows = await service.listStudents(school.id, classId);
     return sendSuccess(res, rows, 'students_list');
   } catch (e) {
-    return sendError(res, e instanceof Error ? e.message : 'list_students_failed', 400);
+    return sendError(res, e instanceof Error ? e.message : 'list_students_failed', 400, e);
   }
 }
 
@@ -125,7 +125,7 @@ export async function editStudent(req: Request, res: Response) {
     if (!ok) return sendError(res, 'student_not_found_or_unauthorized', 404);
     return sendSuccess(res, null, 'student_updated');
   } catch (e) {
-    return sendError(res, e instanceof Error ? e.message : 'update_student_failed', 400);
+    return sendError(res, e instanceof Error ? e.message : 'update_student_failed', 400, e);
   }
 }
 
@@ -140,7 +140,7 @@ export async function deleteStudent(req: Request, res: Response) {
     if (!ok) return sendError(res, 'student_not_found_or_unauthorized', 404);
     return sendSuccess(res, null, 'student_deleted');
   } catch (e) {
-    return sendError(res, e instanceof Error ? e.message : 'delete_student_failed', 400);
+    return sendError(res, e instanceof Error ? e.message : 'delete_student_failed', 400, e);
   }
 }
 
@@ -159,7 +159,7 @@ export async function assignStudentsToBus(req: Request, res: Response) {
     const count = await service.assignStudentsToBus(school.id, parsed.data.bus_id, parsed.data.student_ids);
     return sendSuccess(res, { assigned: count }, 'students_assigned_to_bus');
   } catch (e) {
-    return sendError(res, e instanceof Error ? e.message : 'assign_students_bus_failed', 400);
+    return sendError(res, e instanceof Error ? e.message : 'assign_students_bus_failed', 400, e);
   }
 }
 
@@ -174,7 +174,7 @@ export async function assignStudentsToClass(req: Request, res: Response) {
     const result = await service.assignStudentsToClass(school.id, parsed.data.class_id, parsed.data.student_ids);
     return sendSuccess(res, result, 'students_assigned_to_class');
   } catch (e) {
-    return sendError(res, e instanceof Error ? e.message : 'assign_students_class_failed', 400);
+    return sendError(res, e instanceof Error ? e.message : 'assign_students_class_failed', 400, e);
   }
 }
 
@@ -189,7 +189,7 @@ export async function unassignStudentsFromBus(req: Request, res: Response) {
     const count = await service.unassignStudentsFromBus(school.id, parsed.data.student_ids);
     return sendSuccess(res, { unassigned: count }, 'students_unassigned_from_bus');
   } catch (e) {
-    return sendError(res, e instanceof Error ? e.message : 'unassign_students_bus_failed', 400);
+    return sendError(res, e instanceof Error ? e.message : 'unassign_students_bus_failed', 400, e);
   }
 }
 
@@ -204,6 +204,6 @@ export async function unassignStudentsFromClass(req: Request, res: Response) {
     const result = await service.unassignStudentsFromClass(school.id, parsed.data.student_ids);
     return sendSuccess(res, result, 'students_unassigned_from_class');
   } catch (e) {
-    return sendError(res, e instanceof Error ? e.message : 'unassign_students_class_failed', 400);
+    return sendError(res, e instanceof Error ? e.message : 'unassign_students_class_failed', 400, e);
   }
 }

@@ -222,7 +222,7 @@ export async function upsertSchoolAttendance(schoolId: string, takenByUserId: st
   return rowCount ?? 0;
 }
 
-export async function upsertBusAttendance(schoolId: string, takenByUserId: string, takenByRole: string, entries: AttendanceEntry[], driverBusId?: string | null): Promise<number> {
+export async function upsertBusAttendance(schoolId: string, takenByUserId: string, takenByRole: string, entries: AttendanceEntry[], driverBusId?: string | null, tripId?: string | null): Promise<number> {
   if (entries.length === 0) return 0;
   // Determine bus_id per student: prefer student's assigned bus in student_buses; fallback to driver's bus if provided
   const values: any[] = [];
@@ -232,8 +232,8 @@ export async function upsertBusAttendance(schoolId: string, takenByUserId: strin
     const status = e.status ?? 'present';
     const note = e.note ?? null;
     const date = e.date ? e.date : null;
-    rowsSql.push(`($${idx++}, $${idx++}, COALESCE($${idx++}::date, now()::date), $${idx++}, $${idx++}, $${idx++})`);
-    values.push(e.student_id, schoolId, date, status, note, takenByUserId);
+    rowsSql.push(`($${idx++}, $${idx++}, COALESCE($${idx++}::date, now()::date), $${idx++}, $${idx++}, $${idx++}, $${idx++})`);
+    values.push(e.student_id, schoolId, date, status, note, takenByUserId, tripId ?? null);
   }
   const sql = `
     WITH v(student_id, school_id, attendance_date, status, note, taken_by_user_id) AS (
@@ -250,11 +250,11 @@ export async function upsertBusAttendance(schoolId: string, takenByUserId: strin
       FROM v
       LEFT JOIN student_buses sb ON sb.student_id = (v.student_id)::uuid AND sb.school_id = (v.school_id)::uuid
     )
-    INSERT INTO bus_attendance (student_id, school_id, bus_id, attendance_date, status, note, taken_by_user_id, taken_by_role)
-    SELECT r.student_id, r.school_id, r.bus_id, r.attendance_date, (r.status)::attendance_status, r.note, r.taken_by_user_id, $${values.push(takenByRole)}::user_role
+    INSERT INTO bus_attendance (student_id, school_id, bus_id, attendance_date, status, note, taken_by_user_id, taken_by_role, trip_id)
+    SELECT r.student_id, r.school_id, r.bus_id, r.attendance_date, (r.status)::attendance_status, r.note, r.taken_by_user_id, $${values.push(takenByRole)}::user_role, $${values.push(tripId ?? null)}::uuid
     FROM resolved r
-    ON CONFLICT (student_id, attendance_date)
-    DO UPDATE SET status = EXCLUDED.status, note = EXCLUDED.note, bus_id = EXCLUDED.bus_id, taken_by_user_id = EXCLUDED.taken_by_user_id, taken_by_role = EXCLUDED.taken_by_role, updated_at = now()
+    ON CONFLICT (student_id, trip_id)
+    DO UPDATE SET status = EXCLUDED.status, note = EXCLUDED.note, bus_id = EXCLUDED.bus_id, taken_by_user_id = EXCLUDED.taken_by_user_id, taken_by_role = EXCLUDED.taken_by_role, attendance_date = EXCLUDED.attendance_date, updated_at = now()
     RETURNING 1`;
   const { rowCount } = await db.query(sql, values);
   return rowCount ?? 0;

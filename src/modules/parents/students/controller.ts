@@ -33,7 +33,7 @@ export async function createStudent(req: Request, res: Response) {
     });
     return sendSuccess(res, row, 'student_created', 201);
   } catch (e) {
-    return sendError(res, e instanceof Error ? e.message : 'create_student_failed', 400);
+    return sendError(res, e instanceof Error ? e.message : 'create_student_failed', 400, e);
   }
 }
 
@@ -44,7 +44,7 @@ export async function listMyStudents(req: Request, res: Response) {
     const rows = await studentsRepo.listStudentsByParent(user.sub);
     return sendSuccess(res, rows, 'students_list');
   } catch (e) {
-    return sendError(res, e instanceof Error ? e.message : 'list_students_failed', 400);
+    return sendError(res, e instanceof Error ? e.message : 'list_students_failed', 400, e);
   }
 }
 
@@ -63,7 +63,7 @@ export async function editMyStudent(req: Request, res: Response) {
     if (!ok) return sendError(res, 'student_not_found_or_unauthorized', 404);
     return sendSuccess(res, null, 'student_updated');
   } catch (e) {
-    return sendError(res, e instanceof Error ? e.message : 'update_student_failed', 400);
+    return sendError(res, e instanceof Error ? e.message : 'update_student_failed', 400, e);
   }
 }
 
@@ -76,6 +76,6 @@ export async function deleteMyStudent(req: Request, res: Response) {
     if (!ok) return sendError(res, 'student_not_found_or_unauthorized', 404);
     return sendSuccess(res, null, 'student_deleted');
   } catch (e) {
-    return sendError(res, e instanceof Error ? e.message : 'delete_student_failed', 400);
+    return sendError(res, e instanceof Error ? e.message : 'delete_student_failed', 400, e);
   }
 }
