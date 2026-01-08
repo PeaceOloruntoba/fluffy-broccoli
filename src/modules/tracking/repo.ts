@@ -297,4 +297,3 @@ export async function getLiveForParent(userId: string): Promise<any | null> {
   );
   return rows[0] ?? null;
 }
-
