@@ -50,6 +50,8 @@ export async function updateParent(parentId: string, schoolId: string, updates: 
   if (updates.nin !== undefined) { fields.push(`nin = $${idx++}`); values.push(updates.nin); }
   if (updates.relationship !== undefined) { fields.push(`relationship = $${idx++}`); values.push(updates.relationship); }
   if (updates.address !== undefined) { fields.push(`address = $${idx++}`); values.push(updates.address); }
+  if (updates.latitude !== undefined) { fields.push(`latitude = $${idx++}`); values.push(updates.latitude); }
+  if (updates.longitude !== undefined) { fields.push(`longitude = $${idx++}`); values.push(updates.longitude); }
   if (fields.length === 0) return false;
   values.push(parentId, schoolId);
   const sql = `UPDATE parents SET ${fields.join(', ')}, updated_at = now() WHERE id = $${idx++} AND school_id = $${idx++}`;

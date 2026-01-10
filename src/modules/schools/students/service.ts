@@ -1,14 +1,25 @@
 import * as repo from './repo.js';
 import type { CreateStudentRequest, UpdateStudentRequest, Student } from './type.js';
 import { db } from '../../shared/config/db.js';
+import { geocodeAddressToCoords } from '../../shared/utils/geocode.js';
 
 export async function createStudent(schoolId: string, input: CreateStudentRequest): Promise<Student> {
+  // Resolve coords if only address is provided
+  let lat = input.latitude ?? null;
+  let lng = input.longitude ?? null;
+  if ((lat == null || lng == null) && input.address) {
+    const geo = await geocodeAddressToCoords(input.address);
+    if (geo) { lat = geo.lat; lng = geo.lng; }
+  }
   return repo.insertStudent({
     school_id: schoolId,
     name: input.name,
     reg_no: input.reg_no ?? null,
     class_id: input.class_id ?? null,
-    parent_user_id: input.parent_id ?? null
+    parent_user_id: input.parent_id ?? null,
+    address: input.address ?? null,
+    latitude: lat,
+    longitude: lng
   });
 }
 
@@ -56,11 +67,21 @@ export async function getStudentWithParent(studentId: string, schoolId: string):
 }
 
 export async function updateStudent(studentId: string, schoolId: string, input: UpdateStudentRequest): Promise<boolean> {
+  // If address present but no coords provided in update, try geocoding
+  let lat = input.latitude ?? undefined;
+  let lng = input.longitude ?? undefined;
+  if ((lat == null || lng == null) && input.address) {
+    const geo = await geocodeAddressToCoords(input.address);
+    if (geo) { lat = geo.lat; lng = geo.lng; }
+  }
   return repo.updateStudent(studentId, schoolId, {
     name: input.name ?? undefined,
     reg_no: input.reg_no ?? undefined,
     class_id: input.class_id ?? undefined,
-    parent_user_id: input.parent_id ?? undefined
+    parent_user_id: input.parent_id ?? undefined,
+    address: input.address ?? undefined,
+    latitude: lat,
+    longitude: lng
   });
 }
 

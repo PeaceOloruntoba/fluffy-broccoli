@@ -23,6 +23,9 @@ export type CreateParentRequest = {
   relationship: 'Father'|'Mother'|'Aunty'|'Uncle';
   email: string;
   password: string;
+  address?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
 };
 
 export type UpdateParentRequest = {
@@ -31,4 +34,6 @@ export type UpdateParentRequest = {
   nin?: string | null;
   relationship?: 'Father'|'Mother'|'Aunty'|'Uncle' | null;
   address?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
 };

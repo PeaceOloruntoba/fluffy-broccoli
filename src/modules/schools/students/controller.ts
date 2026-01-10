@@ -8,14 +8,20 @@ const createSchema = z.object({
   name: z.string().min(1),
   reg_no: z.string().optional().nullable(),
   class_id: z.string().uuid().optional().nullable(),
-  parent_id: z.string().uuid().optional().nullable() // users.id of parent
+  parent_id: z.string().uuid().optional().nullable(), // users.id of parent
+  address: z.string().optional().nullable(),
+  latitude: z.coerce.number().optional().nullable(),
+  longitude: z.coerce.number().optional().nullable()
 });
 
 const updateSchema = z.object({
   name: z.string().optional().nullable(),
   reg_no: z.string().optional().nullable(),
   class_id: z.string().uuid().optional().nullable(),
-  parent_id: z.string().uuid().optional().nullable()
+  parent_id: z.string().uuid().optional().nullable(),
+  address: z.string().optional().nullable(),
+  latitude: z.coerce.number().optional().nullable(),
+  longitude: z.coerce.number().optional().nullable()
 });
 
 export async function createStudent(req: Request, res: Response) {

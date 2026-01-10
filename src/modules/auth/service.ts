@@ -7,6 +7,7 @@ import { sendEmail } from '../shared/services/email.js';
 import type { LoginRequest, LoginResponse } from './type.js';
 import { consumeOtp, createUserTx, deleteOtpsForEmailPurpose, findUserByEmailOrUsername, findValidOtp, getSchoolById, getSchoolByUserId, getParentByUserId, getTeacherByUserId, getUserByEmail, insertOtp, insertParentTx, insertSchoolTx, insertTeacherTx, isProfileVerified, reserveUniqueCodeTx, setUserEmailVerifiedByEmail, updateLastLogin, updateUserPassword, insertRefreshToken, findRefreshToken, revokeRefreshToken, revokeAllUserRefreshTokens } from './repo.js';
 import { db } from '../shared/config/db.js';
+import { geocodeAddressToCoords } from '../shared/utils/geocode.js';
 import * as notifications from '../notifications/service.js';
 import type { SignupParentRequest, SignupSchoolRequest, SignupTeacherRequest } from './type.js';
 import { uploadBuffer } from '../shared/services/cloudinary.js';
@@ -214,6 +215,14 @@ export async function signupParent(input: SignupParentRequest) {
       if (ok) { parentCode = code; break; }
     }
     if (!parentCode) throw new Error('could_not_allocate_code');
+    // If address provided but no coords, attempt geocoding
+    let lat = input.latitude ?? null;
+    let lng = input.longitude ?? null;
+    if ((lat == null || lng == null) && input.address) {
+      const geo = await geocodeAddressToCoords(input.address);
+      if (geo) { lat = geo.lat; lng = geo.lng; }
+    }
+
     await insertParentTx(client, {
       user_id: user.id,
       school_id: input.school_id,
@@ -223,8 +232,8 @@ export async function signupParent(input: SignupParentRequest) {
       nin: input.nin ?? null,
       relationship: input.relationship,
       address: input.address ?? null,
-      latitude: input.latitude ?? null,
-      longitude: input.longitude ?? null
+      latitude: lat,
+      longitude: lng
     });
     const code = generateSixDigitOtp();
     const expires = addMinutes(new Date(), env.OTP_TTL_MINUTES);

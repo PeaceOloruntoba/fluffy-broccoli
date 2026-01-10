@@ -1,12 +1,12 @@
 import { db } from '../../shared/config/db.js';
 import type { Student } from './type.js';
 
-export async function insertStudent(params: { school_id: string; name: string; reg_no?: string | null; class_id?: string | null; parent_user_id?: string | null }): Promise<Student> {
+export async function insertStudent(params: { school_id: string; name: string; reg_no?: string | null; class_id?: string | null; parent_user_id?: string | null; address?: string | null; latitude?: number | null; longitude?: number | null }): Promise<Student> {
   const { rows } = await db.query(
-    `INSERT INTO students (school_id, name, reg_no, class_id, parent_user_id)
-     VALUES ($1,$2,$3,$4,$5)
-     RETURNING id, school_id, name, reg_no, class_id, parent_user_id as parent_id, created_at, updated_at, deleted_at`,
-    [params.school_id, params.name, params.reg_no ?? null, params.class_id ?? null, params.parent_user_id ?? null]
+    `INSERT INTO students (school_id, name, reg_no, class_id, parent_user_id, address, latitude, longitude)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+     RETURNING id, school_id, name, reg_no, class_id, parent_user_id as parent_id, address, latitude, longitude, created_at, updated_at, deleted_at`,
+    [params.school_id, params.name, params.reg_no ?? null, params.class_id ?? null, params.parent_user_id ?? null, params.address ?? null, params.latitude ?? null, params.longitude ?? null]
   );
   return rows[0];
 }
@@ -27,7 +27,7 @@ export async function bulkInsertStudents(rowsIn: Array<{ school_id: string; name
 
 export async function getStudentById(id: string, schoolId: string): Promise<Student | null> {
   const { rows } = await db.query(
-    `SELECT id, school_id, name, reg_no, class_id, parent_user_id as parent_id, created_at, updated_at, deleted_at
+    `SELECT id, school_id, name, reg_no, class_id, parent_user_id as parent_id, address, latitude, longitude, created_at, updated_at, deleted_at
      FROM students WHERE id = $1 AND school_id = $2 AND (deleted_at IS NULL) LIMIT 1`,
     [id, schoolId]
   );
@@ -39,7 +39,7 @@ export async function listStudentsBySchool(schoolId: string, classId?: string | 
   let where = `school_id = $1 AND (deleted_at IS NULL)`;
   if (classId) { where += ` AND class_id = $2`; params.push(classId); }
   const { rows } = await db.query(
-    `SELECT id, school_id, name, reg_no, class_id, parent_user_id as parent_id, created_at, updated_at, deleted_at
+    `SELECT id, school_id, name, reg_no, class_id, parent_user_id as parent_id, address, latitude, longitude, created_at, updated_at, deleted_at
      FROM students WHERE ${where} ORDER BY created_at DESC`,
     params
   );
@@ -51,13 +51,13 @@ export async function listStudentsByParent(parentUserId: string, schoolId?: stri
   let where = `parent_user_id = $1 AND (deleted_at IS NULL)`;
   if (schoolId) { where += ` AND school_id = $2`; params.push(schoolId); }
   const { rows } = await db.query(
-    `SELECT id, school_id, name, reg_no, class_id, parent_user_id as parent_id, created_at, updated_at, deleted_at FROM students WHERE ${where} ORDER BY created_at DESC`,
+    `SELECT id, school_id, name, reg_no, class_id, parent_user_id as parent_id, address, latitude, longitude, created_at, updated_at, deleted_at FROM students WHERE ${where} ORDER BY created_at DESC`,
     params
   );
   return rows;
 }
 
-export async function updateStudent(id: string, schoolId: string, updates: Partial<{ name: string | null; reg_no: string | null; class_id: string | null; parent_user_id: string | null }>): Promise<boolean> {
+export async function updateStudent(id: string, schoolId: string, updates: Partial<{ name: string | null; reg_no: string | null; class_id: string | null; parent_user_id: string | null; address: string | null; latitude: number | null; longitude: number | null }>): Promise<boolean> {
   const fields: string[] = [];
   const values: any[] = [];
   let idx = 1;
@@ -65,6 +65,9 @@ export async function updateStudent(id: string, schoolId: string, updates: Parti
   if (updates.reg_no !== undefined) { fields.push(`reg_no = $${idx++}`); values.push(updates.reg_no); }
   if (updates.class_id !== undefined) { fields.push(`class_id = $${idx++}`); values.push(updates.class_id); }
   if (updates.parent_user_id !== undefined) { fields.push(`parent_user_id = $${idx++}`); values.push(updates.parent_user_id); }
+  if (updates.address !== undefined) { fields.push(`address = $${idx++}`); values.push(updates.address); }
+  if (updates.latitude !== undefined) { fields.push(`latitude = $${idx++}`); values.push(updates.latitude); }
+  if (updates.longitude !== undefined) { fields.push(`longitude = $${idx++}`); values.push(updates.longitude); }
   if (fields.length === 0) return false;
   values.push(id, schoolId);
   const sql = `UPDATE students SET ${fields.join(', ')}, updated_at = now() WHERE id = $${idx++} AND school_id = $${idx++} AND (deleted_at IS NULL)`;
@@ -153,7 +156,7 @@ export async function clearStudentsClassBulk(schoolId: string, studentIds: strin
 export async function getStudentByIdWithParent(id: string, schoolId: string): Promise<any | null> {
   const { rows } = await db.query(
     `SELECT 
-       s.id, s.school_id, s.name, s.reg_no, s.class_id, s.parent_user_id as parent_id, s.created_at, s.updated_at, s.deleted_at,
+       s.id, s.school_id, s.name, s.reg_no, s.class_id, s.parent_user_id as parent_id, s.address, s.latitude, s.longitude, s.created_at, s.updated_at, s.deleted_at,
        p.id as parent_profile_id, p.parent_code as parent_code, p.fullname as parent_fullname, p.phone_number as parent_phone_number,
        u.email as parent_email, u.name as parent_user_name
      FROM students s
@@ -174,13 +177,16 @@ export async function softDeleteStudent(id: string, schoolId: string): Promise<b
   return (rowCount ?? 0) > 0;
 }
 
-export async function updateStudentForParent(id: string, parentUserId: string, updates: Partial<{ name: string | null; reg_no: string | null; class_id: string | null }>): Promise<boolean> {
+export async function updateStudentForParent(id: string, parentUserId: string, updates: Partial<{ name: string | null; reg_no: string | null; class_id: string | null; address: string | null; latitude: number | null; longitude: number | null }>): Promise<boolean> {
   const fields: string[] = [];
   const values: any[] = [];
   let idx = 1;
   if (updates.name !== undefined) { fields.push(`name = $${idx++}`); values.push(updates.name); }
   if (updates.reg_no !== undefined) { fields.push(`reg_no = $${idx++}`); values.push(updates.reg_no); }
   if (updates.class_id !== undefined) { fields.push(`class_id = $${idx++}`); values.push(updates.class_id); }
+  if (updates.address !== undefined) { fields.push(`address = $${idx++}`); values.push(updates.address); }
+  if (updates.latitude !== undefined) { fields.push(`latitude = $${idx++}`); values.push(updates.latitude); }
+  if (updates.longitude !== undefined) { fields.push(`longitude = $${idx++}`); values.push(updates.longitude); }
   if (fields.length === 0) return false;
   values.push(id, parentUserId);
   const sql = `UPDATE students SET ${fields.join(', ')}, updated_at = now() WHERE id = $${idx++} AND parent_user_id = $${idx++} AND (deleted_at IS NULL)`;

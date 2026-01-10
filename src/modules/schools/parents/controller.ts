@@ -12,7 +12,10 @@ const createSchema = z.object({
   nin: z.string().optional().nullable(),
   relationship: z.enum(['Father','Mother','Aunty','Uncle']),
   email: z.string().email(),
-  password: z.string().min(6)
+  password: z.string().min(6),
+  address: z.string().optional().nullable(),
+  latitude: z.coerce.number().optional().nullable(),
+  longitude: z.coerce.number().optional().nullable()
 });
 
 const updateSchema = z.object({
@@ -20,7 +23,9 @@ const updateSchema = z.object({
   phonenumber: z.string().optional().nullable(),
   nin: z.string().optional().nullable(),
   relationship: z.enum(['Father','Mother','Aunty','Uncle']).optional().nullable(),
-  address: z.string().optional().nullable()
+  address: z.string().optional().nullable(),
+  latitude: z.coerce.number().optional().nullable(),
+  longitude: z.coerce.number().optional().nullable()
 });
 
 const createStudentSchema = z.object({

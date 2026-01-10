@@ -1,4 +1,5 @@
 import { db } from '../../shared/config/db.js';
+import { geocodeAddressToCoords } from '../../shared/utils/geocode.js';
 import { hashPassword } from '../../shared/utils/password.js';
 import { generatePersonCode } from '../../shared/utils/code.js';
 import { reserveUniqueCodeTx, createUserTx, insertParentTx } from '../../auth/repo.js';
@@ -22,6 +23,14 @@ export async function createParentAsSchool(schoolId: string, schoolUserId: strin
     }
     if (!parentCode) throw new Error('could_not_allocate_code');
 
+    // resolve coordinates if only address provided
+    let lat = input.latitude ?? null;
+    let lng = input.longitude ?? null;
+    if ((lat == null || lng == null) && input.address) {
+      const geo = await geocodeAddressToCoords(input.address);
+      if (geo) { lat = geo.lat; lng = geo.lng; }
+    }
+
     // insert parent
     await insertParentTx(client, {
       user_id: user.id,
@@ -31,9 +40,9 @@ export async function createParentAsSchool(schoolId: string, schoolUserId: strin
       phone_number: input.phonenumber ?? null,
       nin: input.nin ?? null,
       relationship: input.relationship ?? null,
-      address: null,
-      latitude: null,
-      longitude: null
+      address: input.address ?? null,
+      latitude: lat,
+      longitude: lng
     });
 
     // mark parent verified and user email_verified within transaction
@@ -64,7 +73,9 @@ export async function updateParent(parentId: string, schoolId: string, input: Up
     phone_number: input.phonenumber ?? undefined,
     nin: input.nin ?? undefined,
     relationship: input.relationship ?? undefined,
-    address: input.address ?? undefined
+    address: input.address ?? undefined,
+    latitude: input.latitude ?? undefined,
+    longitude: input.longitude ?? undefined
   } as any);
 }
 

@@ -29,6 +29,8 @@ const signupParentSchema = z.object({
   school_id: z.string().uuid(),
   email: z.string().email(),
   password: z.string().min(6),
+  // Optional address text; frontend may also provide city/state/country but we store the full address string for now
+  address: z.string().optional().nullable(),
   // Device geolocation or map picker provides coordinates
   latitude: z.coerce.number().optional().nullable(),
   longitude: z.coerce.number().optional().nullable()
