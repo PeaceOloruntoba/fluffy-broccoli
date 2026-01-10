@@ -1,4 +1,4 @@
-import { getDriverScopeByUser, getAdminSchoolId, createTripWithTargets, insertLocations, patchTargetStatus, setTripEnded, findRunningTripForBus, getLiveForSchool, getLiveForParent, getSchoolCoords, getTripTargetsForOrdering, bulkUpdateTargetOrder, type TripDirection, getDriverUserIdByDriverId, getAdminUserIdBySchool, listTeacherUserIdsBySchool, getParentForTarget, listTripsByDriverUser, listTripsBySchoolUser, listTripsByParentUser, findRunningTripForDriverUser, listTripTargetsSummary } from './repo.js';
+import { getDriverScopeByUser, getAdminSchoolId, createTripWithTargets, insertLocations, patchTargetStatus, setTripEnded, findRunningTripForBus, getLiveForSchool, getLiveForParent, getSchoolCoords, getTripTargetsForOrdering, bulkUpdateTargetOrder, type TripDirection, getDriverUserIdByDriverId, getAdminUserIdBySchool, listTeacherUserIdsBySchool, getParentForTarget, listTripsByDriverUser, listTripsBySchoolUser, listTripsByParentUser, findRunningTripForDriverUser, listTripTargetsSummary, listTripTargetsWithCoords, getTripBusLatestLocation } from './repo.js';
 import { handleLocationPingForReminders } from '../notifications/service.js';
 import { db } from '../shared/config/db.js';
 import * as notifications from '../notifications/service.js';
@@ -165,15 +165,41 @@ export async function getRunningTripForDriver(params: { user_id: string; role: s
 
 export async function listTripsForDriver(params: { user_id: string; role: string; status?: string; direction?: string; cursor?: string | null; limit?: number }) {
   if (params.role !== 'driver') throw new Error('forbidden');
-  return listTripsByDriverUser(params.user_id, { status: params.status, direction: params.direction, cursor: params.cursor ?? null, limit: params.limit });
+  const rows = await listTripsByDriverUser(params.user_id, { status: params.status, direction: params.direction, cursor: params.cursor ?? null, limit: params.limit });
+  // Enrich with school coords, bus latest, and all targets
+  return Promise.all(rows.map(async (t: any) => {
+    const [school, bus, targets] = await Promise.all([
+      getSchoolCoords(t.school_id),
+      getTripBusLatestLocation(t.id),
+      listTripTargetsWithCoords(t.id)
+    ]);
+    return { ...t, school, bus, targets };
+  }));
 }
 
 export async function listTripsForSchool(params: { user_id: string; role: string; status?: string; direction?: string; cursor?: string | null; limit?: number }) {
   if (params.role !== 'admin' && params.role !== 'superadmin') throw new Error('forbidden');
-  return listTripsBySchoolUser(params.user_id, { status: params.status, direction: params.direction, cursor: params.cursor ?? null, limit: params.limit });
+  const rows = await listTripsBySchoolUser(params.user_id, { status: params.status, direction: params.direction, cursor: params.cursor ?? null, limit: params.limit });
+  // Enrich with school coords, bus latest, and all targets
+  return Promise.all(rows.map(async (t: any) => {
+    const [school, bus, targets] = await Promise.all([
+      getSchoolCoords(t.school_id),
+      getTripBusLatestLocation(t.id),
+      listTripTargetsWithCoords(t.id)
+    ]);
+    return { ...t, school, bus, targets };
+  }));
 }
 
 export async function listTripsForParent(params: { user_id: string; role: string; status?: string; direction?: string; cursor?: string | null; limit?: number }) {
   if (params.role !== 'parent') throw new Error('forbidden');
-  return listTripsByParentUser(params.user_id, { status: params.status, direction: params.direction, cursor: params.cursor ?? null, limit: params.limit });
+  const rows = await listTripsByParentUser(params.user_id, { status: params.status, direction: params.direction, cursor: params.cursor ?? null, limit: params.limit });
+  // Enrich with school coords and bus latest (no targets for parent list)
+  return Promise.all(rows.map(async (t: any) => {
+    const [school, bus] = await Promise.all([
+      getSchoolCoords(t.school_id),
+      getTripBusLatestLocation(t.id)
+    ]);
+    return { ...t, school, bus };
+  }));
 }

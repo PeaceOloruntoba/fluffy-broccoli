@@ -52,7 +52,7 @@ export async function getSchoolCoords(schoolId: string): Promise<{ latitude: num
 
 export async function getTripTargetsForOrdering(tripId: string): Promise<Array<{ id: string; student_id: string; lat: number; lng: number; name: string }>> {
   const { rows } = await db.query(
-    `SELECT tt.id, tt.student_id, COALESCE(tt.target_lat, p.latitude) AS lat, COALESCE(tt.target_lng, p.longitude) AS lng, s.name
+    `SELECT tt.id, tt.student_id, COALESCE(tt.target_lat, p.latitude, s.latitude) AS lat, COALESCE(tt.target_lng, p.longitude, s.longitude) AS lng, s.name
      FROM trip_targets tt
      JOIN students s ON s.id = tt.student_id
      LEFT JOIN parents p ON p.user_id = s.parent_user_id AND p.school_id = s.school_id
@@ -196,6 +196,43 @@ export async function listTripTargetsSummary(tripId: string): Promise<Array<{ ta
     [tripId]
   );
   return rows.map(r => ({ target_id: r.target_id, student_id: r.student_id, name: r.name, status: r.status, order_index: r.order_index ?? null }));
+}
+
+export async function listTripTargetsWithCoords(tripId: string): Promise<Array<{ target_id: string; student_id: string; name: string; status: string; order_index: number | null; lat: number | null; lng: number | null }>> {
+  const { rows } = await db.query(
+    `SELECT tt.id AS target_id, tt.student_id, s.name, tt.status, tt.order_index,
+            COALESCE(tt.target_lat, p.latitude, s.latitude) AS lat,
+            COALESCE(tt.target_lng, p.longitude, s.longitude) AS lng
+     FROM trip_targets tt
+     JOIN students s ON s.id = tt.student_id
+     LEFT JOIN parents p ON p.user_id = s.parent_user_id AND p.school_id = s.school_id
+     WHERE tt.trip_id = $1
+     ORDER BY COALESCE(tt.order_index, 999999) ASC, tt.created_at ASC`,
+    [tripId]
+  );
+  return rows.map(r => ({
+    target_id: r.target_id,
+    student_id: r.student_id,
+    name: r.name,
+    status: r.status,
+    order_index: r.order_index ?? null,
+    lat: r.lat == null ? null : Number(r.lat),
+    lng: r.lng == null ? null : Number(r.lng)
+  }));
+}
+
+export async function getTripBusLatestLocation(tripId: string): Promise<{ lat: number; lng: number; recorded_at: string | null } | null> {
+  const { rows } = await db.query(
+    `SELECT tl.lat, tl.lng, tl.recorded_at
+     FROM trip_locations tl
+     WHERE tl.trip_id = $1
+     ORDER BY tl.recorded_at DESC
+     LIMIT 1`,
+    [tripId]
+  );
+  const r = rows[0];
+  if (!r) return null;
+  return { lat: Number(r.lat), lng: Number(r.lng), recorded_at: r.recorded_at ?? null };
 }
 
 export async function listTripsByDriverUser(userId: string, opts: { status?: string; direction?: string; cursor?: string | null; limit?: number }): Promise<any[]> {

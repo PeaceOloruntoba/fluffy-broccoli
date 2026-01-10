@@ -68,14 +68,21 @@ export async function removeParent(parentId: string, schoolId: string) {
 }
 
 export async function updateParent(parentId: string, schoolId: string, input: UpdateParentRequest) {
+  // If only address is present, resolve coordinates
+  let lat = input.latitude ?? undefined;
+  let lng = input.longitude ?? undefined;
+  if ((lat == null || lng == null) && input.address) {
+    const geo = await geocodeAddressToCoords(input.address);
+    if (geo) { lat = geo.lat; lng = geo.lng; }
+  }
   return repo.updateParent(parentId, schoolId, {
     fullname: input.fullname ?? undefined,
     phone_number: input.phonenumber ?? undefined,
     nin: input.nin ?? undefined,
     relationship: input.relationship ?? undefined,
     address: input.address ?? undefined,
-    latitude: input.latitude ?? undefined,
-    longitude: input.longitude ?? undefined
+    latitude: lat,
+    longitude: lng
   } as any);
 }
 
