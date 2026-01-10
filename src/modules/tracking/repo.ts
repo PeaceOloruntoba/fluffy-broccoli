@@ -297,10 +297,12 @@ export async function getLiveForSchool(schoolId: string): Promise<any[]> {
      SELECT t.id AS trip_id, t.bus_id, t.driver_id, t.direction, t.start_time,
             l.lat, l.lng, l.speed_kph, l.recorded_at,
             b.name AS bus_name,
+            s.latitude AS school_lat, s.longitude AS school_lng, s.name AS school_name,
             (SELECT COUNT(*) FROM trip_targets tt WHERE tt.trip_id = t.id AND tt.status = 'pending') AS remaining_pending
      FROM trips t
      LEFT JOIN latest l ON l.trip_id = t.id AND l.rn = 1
      LEFT JOIN buses b ON b.id = t.bus_id
+     LEFT JOIN schools s ON s.id = t.school_id
      WHERE t.school_id = $1 AND t.status = 'running'
      ORDER BY t.start_time DESC`,
     [schoolId]
