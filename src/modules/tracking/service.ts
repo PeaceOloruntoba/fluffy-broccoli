@@ -168,11 +168,12 @@ export async function listTripsForDriver(params: { user_id: string; role: string
   const rows = await listTripsByDriverUser(params.user_id, { status: params.status, direction: params.direction, cursor: params.cursor ?? null, limit: params.limit });
   // Enrich with school coords, bus latest, and all targets
   return Promise.all(rows.map(async (t: any) => {
-    const [school, bus, targets] = await Promise.all([
+    const [schoolRaw, bus, targets] = await Promise.all([
       getSchoolCoords(t.school_id),
       getTripBusLatestLocation(t.id),
       listTripTargetsWithCoords(t.id)
     ]);
+    const school = schoolRaw ? { lat: schoolRaw.latitude, lng: schoolRaw.longitude } : null;
     return { ...t, school, bus, targets };
   }));
 }
@@ -182,11 +183,12 @@ export async function listTripsForSchool(params: { user_id: string; role: string
   const rows = await listTripsBySchoolUser(params.user_id, { status: params.status, direction: params.direction, cursor: params.cursor ?? null, limit: params.limit });
   // Enrich with school coords, bus latest, and all targets
   return Promise.all(rows.map(async (t: any) => {
-    const [school, bus, targets] = await Promise.all([
+    const [schoolRaw, bus, targets] = await Promise.all([
       getSchoolCoords(t.school_id),
       getTripBusLatestLocation(t.id),
       listTripTargetsWithCoords(t.id)
     ]);
+    const school = schoolRaw ? { lat: schoolRaw.latitude, lng: schoolRaw.longitude } : null;
     return { ...t, school, bus, targets };
   }));
 }
@@ -196,10 +198,11 @@ export async function listTripsForParent(params: { user_id: string; role: string
   const rows = await listTripsByParentUser(params.user_id, { status: params.status, direction: params.direction, cursor: params.cursor ?? null, limit: params.limit });
   // Enrich with school coords and bus latest (no targets for parent list)
   return Promise.all(rows.map(async (t: any) => {
-    const [school, bus] = await Promise.all([
+    const [schoolRaw, bus] = await Promise.all([
       getSchoolCoords(t.school_id),
       getTripBusLatestLocation(t.id)
     ]);
+    const school = schoolRaw ? { lat: schoolRaw.latitude, lng: schoolRaw.longitude } : null;
     return { ...t, school, bus };
   }));
 }
