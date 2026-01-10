@@ -159,8 +159,12 @@ export async function getRunningTripForDriver(params: { user_id: string; role: s
   if (params.role !== 'driver') throw new Error('forbidden');
   const trip = await findRunningTripForDriverUser(params.user_id);
   if (!trip) return null;
-  const targets = await listTripTargetsSummary(trip.id);
-  return { ...trip, targets };
+  const [targets, schoolRaw] = await Promise.all([
+    listTripTargetsWithCoords(trip.id),
+    getSchoolCoords(trip.school_id)
+  ]);
+  const school = schoolRaw ? { lat: schoolRaw.latitude, lng: schoolRaw.longitude } : null;
+  return { ...trip, school, targets };
 }
 
 export async function listTripsForDriver(params: { user_id: string; role: string; status?: string; direction?: string; cursor?: string | null; limit?: number }) {
