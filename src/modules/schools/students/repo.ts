@@ -201,3 +201,31 @@ export async function softDeleteStudentForParent(id: string, parentUserId: strin
   );
   return (rowCount ?? 0) > 0;
 }
+
+// Helpers to link/unlink students to a parent profile
+export async function getStudentByRegNo(regNo: string, schoolId: string): Promise<Student | null> {
+  const { rows } = await db.query(
+    `SELECT id, school_id, name, reg_no, class_id, parent_user_id as parent_id, address, latitude, longitude, created_at, updated_at, deleted_at
+     FROM students WHERE reg_no = $1 AND school_id = $2 AND (deleted_at IS NULL) LIMIT 1`,
+    [regNo, schoolId]
+  );
+  return rows[0] ?? null;
+}
+
+export async function linkStudentToParentByRegNo(regNo: string, schoolId: string, parentUserId: string): Promise<boolean> {
+  const { rowCount } = await db.query(
+    `UPDATE students SET parent_user_id = $1, updated_at = now()
+     WHERE reg_no = $2 AND school_id = $3 AND (deleted_at IS NULL) AND (parent_user_id IS NULL)`,
+    [parentUserId, regNo, schoolId]
+  );
+  return (rowCount ?? 0) > 0;
+}
+
+export async function unlinkStudentForParent(studentId: string, parentUserId: string): Promise<boolean> {
+  const { rowCount } = await db.query(
+    `UPDATE students SET parent_user_id = NULL, updated_at = now()
+     WHERE id = $1 AND parent_user_id = $2 AND (deleted_at IS NULL)`,
+    [studentId, parentUserId]
+  );
+  return (rowCount ?? 0) > 0;
+}

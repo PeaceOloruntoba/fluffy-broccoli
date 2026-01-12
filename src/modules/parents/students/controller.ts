@@ -17,6 +17,10 @@ const updateSchema = z.object({
   class_id: z.string().uuid().optional().nullable()
 });
 
+const linkSchema = z.object({
+  reg_no: z.string().min(1)
+});
+
 export async function createStudent(req: Request, res: Response) {
   const parsed = createSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ success: false, message: 'validation_error', errors: parsed.error.flatten() });
@@ -34,6 +38,36 @@ export async function createStudent(req: Request, res: Response) {
     return sendSuccess(res, row, 'student_created', 201);
   } catch (e) {
     return sendError(res, e instanceof Error ? e.message : 'create_student_failed', 400, e);
+  }
+}
+export async function linkExistingStudent(req: Request, res: Response) {
+  const parsed = linkSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ success: false, message: 'validation_error', errors: parsed.error.flatten() });
+  try {
+    const user = (req as any).auth;
+    if (!user) return sendError(res, 'unauthorized', 401);
+    // Look up parent's school to scope reg_no
+    const parent = await getParentByUserId(user.sub);
+    if (!parent) return sendError(res, 'parent_profile_not_found', 400);
+    const ok = await studentsRepo.linkStudentToParentByRegNo(parsed.data.reg_no, parent.school_id, user.sub);
+    if (!ok) return sendError(res, 'link_failed_or_already_linked', 400);
+    const student = await studentsRepo.getStudentByRegNo(parsed.data.reg_no, parent.school_id);
+    return sendSuccess(res, student, 'student_linked');
+  } catch (e) {
+    return sendError(res, e instanceof Error ? e.message : 'link_student_failed', 400, e);
+  }
+}
+
+export async function unlinkMyStudent(req: Request, res: Response) {
+  try {
+    const user = (req as any).auth;
+    if (!user) return sendError(res, 'unauthorized', 401);
+    const { studentId } = req.params;
+    const ok = await studentsRepo.unlinkStudentForParent(studentId, user.sub);
+    if (!ok) return sendError(res, 'student_not_found_or_unauthorized', 404);
+    return sendSuccess(res, null, 'student_unlinked');
+  } catch (e) {
+    return sendError(res, e instanceof Error ? e.message : 'unlink_student_failed', 400, e);
   }
 }
 
