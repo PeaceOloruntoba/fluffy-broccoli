@@ -1,4 +1,4 @@
-import { getDriverScopeByUser, getAdminSchoolId, createTripWithTargets, insertLocations, patchTargetStatus, setTripEnded, findRunningTripForBus, getLiveForSchool, getLiveForParent, getSchoolCoords, getTripTargetsForOrdering, bulkUpdateTargetOrder, type TripDirection, getDriverUserIdByDriverId, getAdminUserIdBySchool, listTeacherUserIdsBySchool, getParentForTarget, listTripsByDriverUser, listTripsBySchoolUser, listTripsByParentUser, findRunningTripForDriverUser, listTripTargetsSummary, listTripTargetsWithCoords, getTripBusLatestLocation } from './repo.js';
+import { getDriverScopeByUser, getAdminSchoolId, createTripWithTargets, insertLocations, patchTargetStatus, setTripEnded, findRunningTripForBus, getLiveForSchool, getLiveForParent, getSchoolCoords, getTripTargetsForOrdering, bulkUpdateTargetOrder, type TripDirection, getDriverUserIdByDriverId, getAdminUserIdBySchool, listTeacherUserIdsBySchool, getParentForTarget, listTripsByDriverUser, listTripsBySchoolUser, listTripsByParentUser, findRunningTripForDriverUser, listTripTargetsSummary, listTripTargetsWithCoords, getTripBusLatestLocation, getLiveForParentStudent } from './repo.js';
 import { handleLocationPingForReminders } from '../notifications/service.js';
 import { db } from '../shared/config/db.js';
 import * as notifications from '../notifications/service.js';
@@ -149,9 +149,9 @@ export async function getLiveView(params: { user_id: string; role: string; query
   return [];
 }
 
-export async function getLiveMine(params: { user_id: string; role: string }) {
+export async function getLiveMine(params: { user_id: string; role: string; student_id?: string }) {
   if (params.role !== 'parent') throw new Error('forbidden');
-  const mine = await getLiveForParent(params.user_id);
+  const mine = params.student_id ? await getLiveForParentStudent(params.user_id, params.student_id) : await getLiveForParent(params.user_id);
   return mine ?? null;
 }
 

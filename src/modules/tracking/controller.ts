@@ -114,7 +114,8 @@ export async function liveMine(req: Request, res: Response) {
   try {
     const auth = (req as any).auth;
     if (!auth) return sendError(res, 'unauthorized', 401);
-    const result = await svc.getLiveMine({ user_id: auth.sub, role: auth.role });
+    const { student_id } = req.query as any;
+    const result = await svc.getLiveMine({ user_id: auth.sub, role: auth.role, student_id: typeof student_id === 'string' ? student_id : undefined });
     return sendSuccess(res, result, 'live_tracking_mine');
   } catch (e) {
     return sendError(res, e instanceof Error ? e.message : 'live_mine_failed', 400, e);

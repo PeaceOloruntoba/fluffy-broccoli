@@ -15,6 +15,33 @@ export async function getDriverScopeByUser(userId: string): Promise<{ school_id:
   return rows[0];
 }
 
+export async function getLiveForParentStudent(userId: string, studentId: string): Promise<any | null> {
+  // Same as getLiveForParent but constrain to a specific student id
+  const { rows } = await db.query(
+    `WITH kids AS (
+       SELECT s.id AS student_id, s.school_id
+       FROM students s WHERE s.parent_user_id = $1 AND s.id = $2 AND s.deleted_at IS NULL
+     ), bus AS (
+       SELECT sb.bus_id, sb.school_id FROM student_buses sb JOIN kids k ON k.student_id = sb.student_id LIMIT 1
+     ), trip AS (
+       SELECT t.id, t.school_id, t.bus_id, t.direction FROM trips t JOIN bus b ON b.bus_id = t.bus_id AND b.school_id = t.school_id WHERE t.status='running' LIMIT 1
+     ), latest AS (
+       SELECT tl.* FROM trip_locations tl JOIN trip tr ON tr.id = tl.trip_id ORDER BY tl.recorded_at DESC LIMIT 1
+     ), school AS (
+       SELECT id, name, latitude, longitude FROM schools s JOIN bus b ON b.school_id = s.id LIMIT 1
+     ), parent_home AS (
+       SELECT p.latitude, p.longitude FROM parents p WHERE p.user_id = $1 LIMIT 1
+     )
+     SELECT tr.id AS trip_id, tr.bus_id, tr.direction,
+            l.lat, l.lng, l.recorded_at,
+            sch.latitude AS school_lat, sch.longitude AS school_lng,
+            ph.latitude AS home_lat, ph.longitude AS home_lng
+     FROM trip tr, latest l, school sch, parent_home ph`,
+    [userId, studentId]
+  );
+  return rows[0] ?? null;
+}
+
 export async function getParentForTarget(trip_id: string, target_id: string): Promise<{ parent_user_id: string | null; student_name: string | null; school_id: string | null } | null> {
   const { rows } = await db.query(
     `SELECT s.parent_user_id, s.name as student_name, t.school_id
